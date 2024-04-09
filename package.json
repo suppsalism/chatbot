@@ -2,10 +2,24 @@
   "name": "@suppsalism/chatbot",
   "version": "1.0.0",
   "description": "",
-  "scripts": {},
+  "type": "module",
+  "source": "src/main.js",
+  "exports": {
+    "require": "./dist/main.cjs",
+    "default": "./dist/main.modern.js"
+  },
+  "main": "./dist/main.cjs",
+  "module": "./dist/main.module.js",
+  "unpkg": "./dist/main.umd.js",
+  "scripts": {
+    "build": "microbundle",
+    "dev": "microbundle watch"
+  },
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "devDependencies": {},
+  "devDependencies": {
+    "microbundle": "^0.15.1"
+  },
   "dependencies": {}
 }
