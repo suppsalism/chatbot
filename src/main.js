@@ -49,61 +49,24 @@ const signal = {
   },
 };
 
-function composer_components({
-  message = '',
-  disabled = false,
-  on_send = () => {},
-  on_type = () => {},
-}) {
-  var [message_state, set_message_state] = signal.create_signal(message);
-  var [disabled_state, set_disabled_state] = signal.create_signal(disabled);
-
-  var wrapper_el = document.createElement('div');
-  var input_el = document.createElement('input');
-  var btn_el = document.createElement('button');
-
-  signal.create_effect(() => {
-    btn_el.disabled = disabled_state();
-    input_el.textContent = message_state();
-  });
-
-  input_el.onkeyup = function (ev) {
-    var value = ev.target.value.trim();
-    set_disabled_state(value.length === 0);
-    set_message_state(value);
-    return Promise.all([on_type(message_state())]).then(() => {
-      if (ev.key === 'Enter' && !ev.shiftKey) {
-        ev.preventDefault();
-        return on_send(message_state());
-      }
-    });
-  };
-
-  btn_el.textContent = 'Send';
-  btn_el.onclick =
-    !disabled_state() &&
-    function () {
-      return on_send(message_state());
-    };
-
-  wrapper_el.appendChild(input_el);
-  wrapper_el.appendChild(btn_el);
-
-  return wrapper_el;
-}
-
 class ChatApp {
   constructor(node, attributes) {
     this.node = node;
     this.chat_visible = false;
-    this.message_form_disabled = false;
-    this.message = '';
-    this.init_attributes(attributes);
+    this.conversation = [];
+    this.init_state();
+    this.init_attribute(attributes);
     this.init_conversation();
-    this.init_components();
+    this.init_component();
   }
 
-  init_attributes(attributes) {
+  init_state() {
+    [this.message_state, this.set_message_state] = signal.create_signal('');
+    [this.disabled_submit_state, this.set_disabled_submit_state] =
+      signal.create_signal(false);
+  }
+
+  init_attribute(attributes) {
     Object.assign(this, {
       brand_color: attributes.brand_color,
       brand_logo_url: attributes.brand_logo_url,
@@ -130,7 +93,7 @@ class ChatApp {
     }));
   }
 
-  init_components() {
+  init_component() {
     pub_sub.subscribe('toggle_chat_visibility', () => {
       this.toggle_wrapper_visibility();
     });
@@ -149,24 +112,25 @@ class ChatApp {
     document.body.appendChild(launcher);
   }
 
-  async send_message(value) {
-    this.add_message({ message: value, is_response: false });
-    this.message = '';
-    this.message_form_disabled = true;
+  send_message(message) {
+    this.add_message({ message: message, is_response: false });
+    this.set_disabled_submit_state(true);
 
-    try {
-      const response = await fetch('http://127.0.0.1:5000/api/qa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: value, chatbot_key: this.chatbot_key }),
+    return fetch('http://127.0.0.1:5000/api/qa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: message, chatbot_key: this.chatbot_key }),
+    })
+      .then(async (response) => {
+        const { answer } = await response.json();
+        this.add_message({ message: answer, is_response: true });
+      })
+      .catch((err) => {
+        throw new Error(`Failed to send message: ${err.message}`);
+      })
+      .finally(() => {
+        this.set_disabled_submit_state(false);
       });
-      const { answer } = await response.json();
-      this.add_message({ message: answer, is_response: true });
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    } finally {
-      this.message_form_disabled = false;
-    }
   }
 
   add_message({ message, is_response = false }) {
@@ -187,6 +151,10 @@ class ChatApp {
       ];
     }
     this.update_ui();
+  }
+
+  type_message(message) {
+    this.set_message_state(message);
   }
 
   update_ui() {
@@ -271,13 +239,13 @@ class ChatApp {
     wrapper_slot.appendChild(
       composer_component({
         placeholder: this.input_placeholder,
-        message: '',
-        disabled: true,
+        message_state: this.message_state,
+        disabled_submit_state: this.disabled_submit_state,
         on_send: (value) => {
-          this.send_message(value);
+          return this.send_message(value);
         },
         on_type: (value) => {
-          console.log('Typing...', value);
+          return this.type_message(value);
         },
       })
     );
@@ -489,9 +457,9 @@ function launcher_component({
 }
 
 function composer_component({
+  message_state,
+  disabled_submit_state,
   placeholder = '',
-  message = '',
-  disabled = false,
   on_send = () => {},
   on_type = () => {},
 }) {
@@ -504,15 +472,16 @@ function composer_component({
   const action = document.createElement('div');
   const button = document.createElement('button');
 
-  const [message_state, set_message_state] = signal.create_signal(message);
-  const [disabled_state, set_disabled_state] = signal.create_signal(disabled);
+  const input_invalid = signal.create_memo(
+    () => message_state().length === 0 || disabled_submit_state()
+  );
 
   signal.create_effect(() => {
-    if (disabled_state()) {
-      button.disabled = disabled_state();
+    if (input_invalid()) {
+      button.disabled = input_invalid();
       button.classList.add('disabled');
     } else {
-      button.disabled = disabled_state();
+      button.disabled = input_invalid();
       button.classList.remove('disabled');
     }
   });
@@ -533,7 +502,7 @@ function composer_component({
 
   textarea.className = 'textarea';
   textarea.contentEditable = true;
-  textarea.innerText = message;
+  textarea.innerText = message_state();
   textarea.setAttribute('placeholder', placeholder);
   textarea.tabIndex = 0;
   textarea.setAttribute('role', 'textbox');
@@ -543,6 +512,7 @@ function composer_component({
   editor.appendChild(action);
 
   button.classList.add('highlight');
+  button.disabled = disabled_submit_state();
   button.innerHTML = `
     <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
       <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
@@ -550,33 +520,29 @@ function composer_component({
   action.appendChild(button);
 
   textarea.onkeyup = function (ev) {
-    let value = textarea.textContent.trim();
-    set_disabled_state(value.length === 0);
-    set_message_state(value);
+    on_type(textarea.textContent);
 
-    if (value.length === 0 || disabled_state()) {
+    if (input_invalid()) {
       ev.stopPropagation();
       return;
     }
 
-    return Promise.all([on_type(value)]).then(() => {
-      if (ev.key === 'Enter' && !ev.shiftKey) {
-        ev.preventDefault();
-        textarea.textContent = '';
-        set_message_state('');
-        set_disabled_state(true);
-        return on_send(value);
-      }
-    });
+    if (ev.key === 'Enter' && ev.shiftKey) {
+      ev.stopPropagation();
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      textarea.textContent = '';
+      return on_send(message_state());
+    }
   };
 
-  button.onclick =
-    !disabled_state() &&
-    function () {
-      set_message_state('');
-      set_disabled_state(true);
-      return on_send(message_state());
-    };
+  button.onclick = function () {
+    if (input_invalid()) {
+      return;
+    }
+    textarea.textContent = '';
+    return on_send(message_state());
+  };
 
   return wrapper;
 }
