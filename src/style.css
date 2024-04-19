@@ -290,7 +290,7 @@ body.theme-dark .message-wrapper .message-container .message.left {
   justify-content: flex-start;
 }
 
-.message-wrapper .container {
+.message-wrapper .message-container {
   max-width: 80%;
 }
 
