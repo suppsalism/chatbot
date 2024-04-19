@@ -585,8 +585,14 @@ class ChatApp {
 
 class DOMInitializer {
   constructor() {
+    [this.attribute_state, this.set_attribute_state] = signal.create_signal({
+      position: 'right',
+      theme: 'light',
+    });
+
     this.head = document.head;
     this.body = document.body;
+    this.chat = document.getElementsByTagName('ss-chat')[0];
 
     this.meta_viewport = null;
     this.meta_charset = null;
@@ -595,19 +601,15 @@ class DOMInitializer {
     this.container = null;
     this.iframe = null;
 
-    this.position = 'right';
-    this.theme = 'light';
-
-    this.attributes = {};
-
-    this.init_nodes();
-  }
-
-  init_nodes() {
     this.create_meta_viewport();
     this.create_meta_charset();
     this.create_link_css();
     this.create_style_tag();
+
+    signal.create_effect(() => {
+      this.position = this.attribute_state().orientation;
+      this.theme = this.attribute_state().theme;
+    });
   }
 
   create_meta_viewport() {
@@ -615,15 +617,11 @@ class DOMInitializer {
     this.meta_viewport.name = 'viewport';
     this.meta_viewport.content =
       'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0';
-
-    return this;
   }
 
   create_meta_charset() {
     this.meta_charset = document.createElement('meta');
     this.meta_charset.charset = 'utf-8';
-
-    return this;
   }
 
   create_link_css() {
@@ -631,8 +629,6 @@ class DOMInitializer {
     this.link_css.href = 'http://127.0.0.1:5500/src/style.css';
     this.link_css.rel = 'stylesheet';
     this.link_css.type = 'text/css';
-
-    return this;
   }
 
   create_style_tag() {
@@ -647,7 +643,14 @@ class DOMInitializer {
   cursor: pointer;
   position: absolute;
   bottom: 42px;
+}
+
+.launcher.right {
   right: 25px;
+}
+
+.launcher.left {
+  left: 25px;
 }
 
 .launcher img {
@@ -706,7 +709,6 @@ class DOMInitializer {
   background: transparent !important;
 }
     `;
-    return this;
   }
 
   setup_container() {
@@ -718,8 +720,6 @@ class DOMInitializer {
 
     this.head.appendChild(this.style_tag);
     this.body.appendChild(this.container);
-
-    return this;
   }
 
   setup_iframe() {
@@ -737,12 +737,10 @@ class DOMInitializer {
     this.iframe.contentWindow.document.head.appendChild(this.meta_charset);
     this.iframe.contentWindow.document.head.appendChild(this.meta_viewport);
     this.iframe.contentWindow.document.head.appendChild(this.link_css);
-
-    return this;
   }
 
   setup_config() {
-    return fetch('http://127.0.0.1:5000/api/chatbot/5f5b3b4b4f6b4d0001f3b3b4')
+    return fetch(`http://127.0.0.1:5000/api/chatbot/${this.chat.dataset.key}`)
       .then((response) => response.json())
       .catch((error) => {
         throw new Error(`Failed to fetch chatbot: ${error.message}`);
@@ -750,15 +748,22 @@ class DOMInitializer {
   }
 
   build_chatbot() {
-    new ChatApp(this.iframe.contentWindow.document.body, this.attributes);
+    new ChatApp(
+      this.iframe.contentWindow.document.body,
+      this.attribute_state()
+    );
   }
 
   execute() {
-    return this.setup_container()
-      .setup_iframe()
-      .setup_config()
+    return this.setup_config()
       .then((attributes) => {
-        this.attributes = attributes;
+        this.set_attribute_state(attributes);
+      })
+      .then(() => {
+        this.setup_container();
+        this.setup_iframe();
+      })
+      .then(() => {
         this.build_chatbot();
       })
       .catch((err) => {
