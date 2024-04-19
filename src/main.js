@@ -664,7 +664,7 @@ function initialize_DOM_elements() {
   const meta_view_port = create_meta_element({
     name: 'viewport',
     content:
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0,',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0',
   });
   const meta_utf = create_meta_element({ charset: 'utf-8' });
   const style = create_style_element(`
