@@ -300,9 +300,16 @@ body.theme-dark .message-wrapper .message-container .message.left {
   gap: 10px;
 }
 
-.message-wrapper .message-container .avatar {
-  width: 30px;
-  height: auto;
+.message-wrapper .message-container .avatar-wrapper {
+  min-width: 30px;
+  max-width: 30px;
+  height: 30px;
+}
+
+.message-wrapper .message-container .avatar-wrapper .avatar {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
   border-radius: 4px;
 }
 

@@ -209,7 +209,7 @@ class ChatApp {
   }
 
   type_message(message) {
-    this.set_message_state(message);
+    this.set_message_state(message.trim());
   }
 
   send_message(message) {
@@ -322,7 +322,11 @@ function signature_component() {
   return wrapper;
 }
 
-function message_wrapper_component({ behavior = 'auto' }) {
+function message_wrapper_component({
+  behavior = 'smooth',
+  block = 'end',
+  inline = 'end',
+}) {
   const wrapper = document.createElement('div');
   wrapper.className = 'message-wrapper-wrapper';
 
@@ -330,21 +334,21 @@ function message_wrapper_component({ behavior = 'auto' }) {
   container.className = 'message-wrapper-container';
   wrapper.appendChild(container);
 
-  function scrollToBottom() {
-    container.scroll({ top: container.scrollHeight, behavior: behavior });
+  const config = { attributes: true, childList: true, subtree: true };
+
+  function scroll_to_bottom() {
+    container.scrollIntoView({ behavior, block, inline });
   }
 
-  const observer = new MutationObserver((mutations) => {
-    const hasNewMessages = mutations.some(
-      (mutation) => mutation.addedNodes.length > 0
-    );
-    if (hasNewMessages) {
-      scrollToBottom();
+  function callback(mutationList) {
+    for (const mutation of mutationList) {
+      if (mutation.type === 'childList') {
+        scroll_to_bottom();
+      }
     }
-  });
+  }
 
-  const config = { childList: true };
-
+  const observer = new MutationObserver(callback);
   observer.observe(container, config);
 
   return wrapper;
@@ -391,14 +395,18 @@ function message_component({ position, message, avatar, color = '#fff' }) {
 
   const group_message = document.createElement('div');
   group_message.className = 'group-message';
-  container.appendChild(group_message);
 
   if (avatar) {
+    const div = document.createElement('div');
+    div.className = 'avatar-wrapper';
+
     const img = document.createElement('img');
     img.className = 'avatar';
     img.src = avatar;
     img.alt = 'Brand logo';
-    group_message.appendChild(img);
+    div.appendChild(img);
+
+    group_message.appendChild(div);
   }
 
   const message_span = document.createElement('span');
@@ -408,6 +416,8 @@ function message_component({ position, message, avatar, color = '#fff' }) {
   const textSpan = document.createElement('span');
   textSpan.textContent = message;
   message_span.appendChild(textSpan);
+
+  container.appendChild(group_message);
 
   return wrapper;
 }
@@ -462,14 +472,18 @@ function typing_component({ position, avatar, color = '#fff' }) {
 
   const group_message = document.createElement('div');
   group_message.className = 'group-message';
-  container.appendChild(group_message);
 
   if (avatar) {
+    const div = document.createElement('div');
+    div.className = 'avatar-wrapper';
+
     const img = document.createElement('img');
     img.className = 'avatar';
     img.src = avatar;
     img.alt = 'Brand logo';
-    group_message.appendChild(img);
+    div.appendChild(img);
+
+    group_message.appendChild(div);
   }
 
   const message_span = document.createElement('span');
@@ -477,6 +491,8 @@ function typing_component({ position, avatar, color = '#fff' }) {
   group_message.appendChild(message_span);
 
   message_span.appendChild(typing);
+
+  container.appendChild(group_message);
 
   return wrapper;
 }
