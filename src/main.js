@@ -1,5 +1,6 @@
-('use strict');
+'use strict';
 
+// START: store patterns
 const pub_sub = {
   events: {},
   subscribe(event, callback) {
@@ -48,68 +49,167 @@ const signal = {
     return signal;
   },
 };
+// END: store patterns
 
+// START: core class chat app
 class ChatApp {
   constructor(node, attributes) {
     this.node = node;
-    this.chat_visible = false;
-    this.conversation = [];
+    this.attributes = attributes;
+    this.init_node();
+    this.init_attribute();
     this.init_state();
-    this.init_attribute(attributes);
-    this.init_conversation();
     this.init_component();
+
+    signal.create_effect(() => {
+      if (this.chat_visible()) {
+        this.wrapper_iframe_node.classList.add('visible');
+      } else {
+        this.wrapper_iframe_node.classList.remove('visible');
+      }
+    });
+
+    signal.create_effect(() => {
+      this.conversation_state().forEach(
+        ({ avatar, message, position, typing }) => {
+          if (typing) {
+            this.typing = this.node
+              .querySelector('.message-wrapper-container')
+              .appendChild(
+                typing_component({
+                  avatar,
+                  position,
+                  color: this.brand_color,
+                })
+              );
+            return;
+          } else {
+            if (this.typing) {
+              this.typing.remove();
+            }
+            this.node.querySelector('.message-wrapper-container').appendChild(
+              message_component({
+                avatar,
+                message,
+                position,
+                typing,
+                color: this.brand_color,
+              })
+            );
+          }
+        }
+      );
+    });
+  }
+
+  init_node() {
+    this.wrapper_iframe_node = document.getElementById(
+      'suppsalism-messages-iframe-container'
+    );
+
+    this.wrapper_component = null;
+    this.thead_component = null;
+    this.signature_component = null;
+    this.message_wrapper_component = null;
+    this.message_component = null;
+    this.typing_component = null;
+    this.launcher_component = null;
+    this.composer_component = null;
+  }
+
+  init_attribute() {
+    Object.assign(this, {
+      brand_color: this.attributes.brand_color,
+      brand_logo_url: this.attributes.brand_logo_url,
+      brand_name: this.attributes.brand_name,
+      chatbot_key: this.attributes.chatbot_key,
+      description: this.attributes.description,
+      headline: this.attributes.headline,
+      hosted_url: this.attributes.hosted_url,
+      input_placeholder: this.attributes.input_placeholder,
+      launcher_logo_url: this.attributes.launcher_logo_url,
+      name: this.attributes.name,
+      orientation: this.attributes.orientation,
+      signature_visible: this.attributes.signature_visible,
+      theme: this.attributes.theme,
+      welcome_message: this.attributes.welcome_message,
+    });
   }
 
   init_state() {
     [this.message_state, this.set_message_state] = signal.create_signal('');
     [this.disabled_submit_state, this.set_disabled_submit_state] =
       signal.create_signal(false);
-  }
-
-  init_attribute(attributes) {
-    Object.assign(this, {
-      brand_color: attributes.brand_color,
-      brand_logo_url: attributes.brand_logo_url,
-      brand_name: attributes.brand_name,
-      chatbot_key: attributes.chatbot_key,
-      description: attributes.description,
-      headline: attributes.headline,
-      hosted_url: attributes.hosted_url,
-      input_placeholder: attributes.input_placeholder,
-      launcher_logo_url: attributes.launcher_logo_url,
-      name: attributes.name,
-      orientation: attributes.orientation,
-      signature_visible: attributes.signature_visible,
-      theme: attributes.theme,
-      welcome_message: attributes.welcome_message,
-    });
-  }
-
-  init_conversation() {
-    this.conversation = this.welcome_message.map((msg) => ({
-      avatar: this.brand_logo_url,
-      message: msg,
-      position: 'left',
-    }));
+    [this.chat_visible, this.set_chat_visible] = signal.create_signal(false);
+    [this.conversation_state, this.set_conversation_state] =
+      signal.create_signal(
+        this.welcome_message.map((msg) => ({
+          avatar: this.brand_logo_url,
+          message: msg,
+          position: 'left',
+        }))
+      );
   }
 
   init_component() {
-    pub_sub.subscribe('toggle_chat_visibility', () => {
-      this.toggle_wrapper_visibility();
-    });
-    pub_sub.subscribe('update_conversation', () => {
-      this.render_conversation();
-    });
-
     const launcher = launcher_component({
       avatar: this.launcher_logo_url,
       color: this.brand_color,
       position: this.orientation,
-      on_toggle: () => this.handle_toggle_chat_visibility(),
+      on_toggle: () => {
+        this.set_chat_visible(!this.chat_visible());
+      },
     });
 
     // inject launcher layout
     document.body.appendChild(launcher);
+
+    const wrapper_node = wrapper_component({
+      position: this.orientation,
+      mode: this.theme,
+    });
+    const wrapper_slot = wrapper_node.querySelector('.content');
+
+    // inject thead layout
+    wrapper_slot.appendChild(
+      thead_component({
+        avatar: this.brand_logo_url,
+        name: this.brand_name,
+        on_close: () => {
+          this.set_chat_visible(false);
+        },
+      })
+    );
+
+    // inject message layout
+    const message_wrapper_node = message_wrapper_component({});
+    wrapper_slot.appendChild(message_wrapper_node);
+
+    // inject composer layout
+    wrapper_slot.appendChild(
+      composer_component({
+        placeholder: this.input_placeholder,
+        message_state: this.message_state,
+        disabled_submit_state: this.disabled_submit_state,
+        on_send: (value) => {
+          return this.send_message(value);
+        },
+        on_type: (value) => {
+          return this.type_message(value);
+        },
+      })
+    );
+
+    // inject signature layout
+    if (this.signature_visible) {
+      wrapper_slot.appendChild(signature_component());
+    }
+
+    this.node.appendChild(wrapper_node);
+  }
+
+  type_message(message) {
+    this.set_message_state(message);
   }
 
   send_message(message) {
@@ -135,129 +235,25 @@ class ChatApp {
 
   add_message({ message, is_response = false }) {
     if (!is_response) {
-      this.conversation = [
-        ...this.conversation,
-        { message: message, position: 'right' },
+      this.set_conversation_state([
+        { message: message, position: 'right', typing: false },
         { avatar: this.brand_logo_url, typing: true, position: 'left' },
-      ];
+      ]);
     } else {
-      this.conversation = [
-        ...this.conversation.slice(0, -1),
+      this.set_conversation_state([
         {
           avatar: this.brand_logo_url,
           message: message,
           position: 'left',
+          typing: false,
         },
-      ];
+      ]);
     }
-    this.update_ui();
-  }
-
-  type_message(message) {
-    this.set_message_state(message);
-  }
-
-  update_ui() {
-    pub_sub.publish('update_conversation');
-  }
-
-  handle_toggle_chat_visibility() {
-    this.chat_visible = !this.chat_visible;
-    pub_sub.publish('toggle_chat_visibility', this.chat_visible);
-  }
-
-  toggle_wrapper_visibility() {
-    const wrapper_iframe_node = document.getElementById(
-      'suppsalism-messages-iframe-container'
-    );
-    if (this.chat_visible) {
-      this.wrapper_node = this.inject_component();
-      this.node.appendChild(this.wrapper_node);
-      wrapper_iframe_node.classList.add('visible');
-    } else if (this.wrapper_node) {
-      this.node.removeChild(this.wrapper_node);
-      this.wrapper_node = null;
-      wrapper_iframe_node.classList.remove('visible');
-    }
-  }
-
-  render_conversation() {
-    if (!this.wrapper_node) return;
-    const message_container = this.wrapper_node.querySelector(
-      '.message-wrapper-container'
-    );
-    message_container.innerHTML = '';
-
-    this.conversation.forEach(({ avatar, message, position, typing }) => {
-      message_container.appendChild(
-        message_component({
-          avatar,
-          message,
-          position,
-          typing,
-          color: this.brand_color,
-        })
-      );
-    });
-  }
-
-  inject_component() {
-    const wrapper_node = wrapper_component({
-      position: this.orientation,
-      mode: this.theme,
-    });
-    const wrapper_slot = wrapper_node.querySelector('.content');
-
-    // inject thead layout
-    wrapper_slot.appendChild(
-      thead_component({
-        avatar: this.brand_logo_url,
-        name: this.brand_name,
-        on_close: () => this.handle_toggle_chat_visibility(),
-      })
-    );
-
-    // inject message layout
-    const message_wrapper_node = message_wrapper_component({});
-    const message_wrapper_slot = message_wrapper_node.querySelector(
-      '.message-wrapper-container'
-    );
-    this.conversation.forEach(({ avatar, message, position, typing }) => {
-      message_wrapper_slot.appendChild(
-        message_component({
-          avatar,
-          message,
-          position,
-          typing,
-          color: this.brand_color,
-        })
-      );
-    });
-    wrapper_slot.appendChild(message_wrapper_node);
-
-    // inject composer layout
-    wrapper_slot.appendChild(
-      composer_component({
-        placeholder: this.input_placeholder,
-        message_state: this.message_state,
-        disabled_submit_state: this.disabled_submit_state,
-        on_send: (value) => {
-          return this.send_message(value);
-        },
-        on_type: (value) => {
-          return this.type_message(value);
-        },
-      })
-    );
-
-    // inject signature layout
-    if (this.signature_visible) {
-      wrapper_slot.appendChild(signature_component());
-    }
-    return wrapper_node;
   }
 }
+// END: core class chat app
 
+// START: components
 function wrapper_component({
   type = 'overlay',
   position = 'right',
@@ -285,19 +281,6 @@ function wrapper_component({
   }, 0);
 
   return wrapper;
-}
-
-function typing_component() {
-  const typing = document.createElement('span');
-  typing.className = 'typing';
-
-  for (let i = 1; i <= 3; i++) {
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    typing.appendChild(dot);
-  }
-
-  return typing;
 }
 
 function thead_component({ avatar, name, on_close }) {
@@ -367,13 +350,7 @@ function message_wrapper_component({ behavior = 'auto' }) {
   return wrapper;
 }
 
-function message_component({
-  position,
-  message,
-  avatar,
-  typing = false,
-  color = '#fff',
-}) {
+function message_component({ position, message, avatar, color = '#fff' }) {
   function hex_to_rgb(hex) {
     let r = 0,
       g = 0,
@@ -428,14 +405,78 @@ function message_component({
   message_span.className = `message ${position}`;
   group_message.appendChild(message_span);
 
-  if (typing) {
-    const typing_indicator = typing_component();
-    message_span.appendChild(typing_indicator);
-  } else {
-    const textSpan = document.createElement('span');
-    textSpan.textContent = message;
-    message_span.appendChild(textSpan);
+  const textSpan = document.createElement('span');
+  textSpan.textContent = message;
+  message_span.appendChild(textSpan);
+
+  return wrapper;
+}
+
+function typing_component({ position, avatar, color = '#fff' }) {
+  function hex_to_rgb(hex) {
+    let r = 0,
+      g = 0,
+      b = 0;
+    if (hex.length === 4) {
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+      r = parseInt(hex.substring(1, 3), 16);
+      g = parseInt(hex.substring(3, 5), 16);
+      b = parseInt(hex.substring(5, 7), 16);
+    }
+    return { r, g, b };
   }
+
+  function calculate_brightness({ r, g, b }) {
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }
+
+  function get_text_color_for_bg(hex_color) {
+    const rgb = hex_color.startsWith('#')
+      ? hex_to_rgb(hex_color)
+      : hex_color.match(/\d+/g).map(Number);
+    const brightness = calculate_brightness(rgb);
+
+    return brightness > 128 ? '#000' : '#fff';
+  }
+
+  const typing = document.createElement('span');
+  typing.className = 'typing';
+
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    typing.appendChild(dot);
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = `message-wrapper ${position}`;
+  wrapper.style.setProperty('--bg-color', color);
+  wrapper.style.setProperty('--txt-color', get_text_color_for_bg(color));
+
+  const container = document.createElement('div');
+  container.className = 'message-container';
+  wrapper.appendChild(container);
+
+  const group_message = document.createElement('div');
+  group_message.className = 'group-message';
+  container.appendChild(group_message);
+
+  if (avatar) {
+    const img = document.createElement('img');
+    img.className = 'avatar';
+    img.src = avatar;
+    img.alt = 'Brand logo';
+    group_message.appendChild(img);
+  }
+
+  const message_span = document.createElement('span');
+  message_span.className = `message ${position}`;
+  group_message.appendChild(message_span);
+
+  message_span.appendChild(typing);
 
   return wrapper;
 }
@@ -546,7 +587,9 @@ function composer_component({
 
   return wrapper;
 }
+// END: components
 
+// START: utils
 function find_chatbot(key) {
   return fetch(`http://127.0.0.1:5000/api/chatbot/${key}`)
     .then((response) => {
@@ -593,7 +636,9 @@ function create_element(tagName, attributes) {
 function append_to_parent(parent, child) {
   parent.appendChild(child);
 }
+// END: utils
 
+// START: init DOM elements
 function initialize_DOM_elements() {
   const css_link = create_link_element(
     'http://127.0.0.1:5500/src/style.css',
@@ -725,3 +770,4 @@ function initialize_DOM_elements() {
 }
 
 initialize_DOM_elements();
+// END: init DOM elements
