@@ -3,23 +3,23 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "source": "src/main.js",
+  "source": "src/core.js",
   "exports": {
-    "require": "./dist/main.cjs",
-    "default": "./dist/main.modern.js"
+    "require": "./dist/core.cjs",
+    "default": "./dist/core.modern.js"
   },
-  "main": "./dist/main.cjs",
-  "module": "./dist/main.module.js",
-  "unpkg": "./dist/main.umd.js",
+  "main": "./dist/core.cjs",
+  "module": "./dist/core.module.js",
+  "unpkg": "./dist/core.umd.js",
   "scripts": {
     "build": "microbundle",
-    "dev": "microbundle watch"
+    "dev": "microbundle watch",
+    "prepublish": "npm run build"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "microbundle": "^0.15.1"
-  },
-  "dependencies": {}
+  }
 }
