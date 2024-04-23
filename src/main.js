@@ -1,379 +1,21 @@
 'use strict';
 
-const signal = {
-  context: [],
-  create_signal(value) {
-    const subscriptions = new Set();
-
-    const read = () => {
-      const observer = this.context[this.context.length - 1];
-      if (observer) subscriptions.add(observer);
-      return value;
-    };
-    const write = (newValue) => {
-      value = newValue;
-      for (const observer of subscriptions) {
-        observer.execute();
-      }
-    };
-
-    return [read, write];
-  },
-  create_effect(fn) {
-    const effect = {
-      execute(self) {
-        self?.context.push(effect);
-        fn();
-        self?.context.pop();
-      },
-    };
-
-    effect.execute(this);
-  },
-  create_memo(fn) {
-    const [signal, set_signal] = this.create_signal();
-    this.create_effect(() => set_signal(fn()));
-    return signal;
-  },
-};
-
-function wrapper_component({ type = 'overlay' }) {
-  const wrapper = document.createElement('div');
-  wrapper.className = `wrapper ${type}`;
-  wrapper.innerHTML = `
-    <div class="container">
-        <div class="content"></div>
-    </div>
-  `;
-
-  return wrapper;
-}
-
-function thead_component({ avatar, name, on_close }) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'thead-wrapper';
-
-  wrapper.innerHTML = `
-    <div class="thead-container">
-        <div class="thead-content">
-            <div class="left">
-                <img class="avatar" src="${avatar}" alt="Brand logo" />
-                <span class="name">${name}</span>
-            </div>
-            <div class="right">
-                <button>
-                    <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
-                        <path d="M19 6.41L17.59 5L12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-  `;
-
-  const close_button = wrapper.querySelector('button');
-  close_button.addEventListener('click', on_close);
-
-  return wrapper;
-}
-
-function signature_component() {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'signature-wrapper';
-
-  wrapper.innerHTML = `
-    <span>Powered by suppsalism</span>
-  `;
-
-  return wrapper;
-}
-
-function message_wrapper_component({
-  behavior = 'smooth',
-  block = 'end',
-  inline = 'end',
-}) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'message-wrapper-wrapper';
-
-  const container = document.createElement('div');
-  container.className = 'message-wrapper-container';
-  wrapper.appendChild(container);
-
-  const config = { attributes: true, childList: true, subtree: true };
-
-  function scroll_to_bottom() {
-    container.scrollIntoView({ behavior, block, inline });
-  }
-
-  function callback(mutationList) {
-    for (const mutation of mutationList) {
-      if (mutation.type === 'childList') {
-        scroll_to_bottom();
-      }
-    }
-  }
-
-  const observer = new MutationObserver(callback);
-  observer.observe(container, config);
-
-  return wrapper;
-}
-
-function message_component({ position, message, avatar, color = '#fff' }) {
-  function hex_to_rgb(hex) {
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (hex.length === 4) {
-      r = parseInt(hex[1] + hex[1], 16);
-      g = parseInt(hex[2] + hex[2], 16);
-      b = parseInt(hex[3] + hex[3], 16);
-    } else if (hex.length === 7) {
-      r = parseInt(hex.substring(1, 3), 16);
-      g = parseInt(hex.substring(3, 5), 16);
-      b = parseInt(hex.substring(5, 7), 16);
-    }
-    return { r, g, b };
-  }
-
-  function calculate_brightness({ r, g, b }) {
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  }
-
-  function get_text_color_for_bg(hex_color) {
-    const rgb = hex_color.startsWith('#')
-      ? hex_to_rgb(hex_color)
-      : hex_color.match(/\d+/g).map(Number);
-    const brightness = calculate_brightness(rgb);
-
-    return brightness > 128 ? '#000' : '#fff';
-  }
-
-  const wrapper = document.createElement('div');
-  wrapper.className = `message-wrapper ${position}`;
-  wrapper.style.setProperty('--bg-color', color);
-  wrapper.style.setProperty('--txt-color', get_text_color_for_bg(color));
-
-  const container = document.createElement('div');
-  container.className = 'message-container';
-  wrapper.appendChild(container);
-
-  const group_message = document.createElement('div');
-  group_message.className = 'group-message';
-
-  if (avatar) {
-    const div = document.createElement('div');
-    div.className = 'avatar-wrapper';
-
-    const img = document.createElement('img');
-    img.className = 'avatar';
-    img.src = avatar;
-    img.alt = 'Brand logo';
-    div.appendChild(img);
-
-    group_message.appendChild(div);
-  }
-
-  const message_span = document.createElement('span');
-  message_span.className = `message ${position}`;
-  group_message.appendChild(message_span);
-
-  const textSpan = document.createElement('span');
-  textSpan.textContent = message;
-  message_span.appendChild(textSpan);
-
-  container.appendChild(group_message);
-
-  return wrapper;
-}
-
-function typing_component({ position, avatar, color = '#fff' }) {
-  function hex_to_rgb(hex) {
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (hex.length === 4) {
-      r = parseInt(hex[1] + hex[1], 16);
-      g = parseInt(hex[2] + hex[2], 16);
-      b = parseInt(hex[3] + hex[3], 16);
-    } else if (hex.length === 7) {
-      r = parseInt(hex.substring(1, 3), 16);
-      g = parseInt(hex.substring(3, 5), 16);
-      b = parseInt(hex.substring(5, 7), 16);
-    }
-    return { r, g, b };
-  }
-
-  function calculate_brightness({ r, g, b }) {
-    return 0.299 * r + 0.587 * g + 0.114 * b;
-  }
-
-  function get_text_color_for_bg(hex_color) {
-    const rgb = hex_color.startsWith('#')
-      ? hex_to_rgb(hex_color)
-      : hex_color.match(/\d+/g).map(Number);
-    const brightness = calculate_brightness(rgb);
-
-    return brightness > 128 ? '#000' : '#fff';
-  }
-
-  const typing = document.createElement('span');
-  typing.className = 'typing';
-
-  for (let i = 1; i <= 3; i++) {
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    typing.appendChild(dot);
-  }
-
-  const wrapper = document.createElement('div');
-  wrapper.className = `message-wrapper ${position}`;
-  wrapper.style.setProperty('--bg-color', color);
-  wrapper.style.setProperty('--txt-color', get_text_color_for_bg(color));
-
-  const container = document.createElement('div');
-  container.className = 'message-container';
-  wrapper.appendChild(container);
-
-  const group_message = document.createElement('div');
-  group_message.className = 'group-message';
-
-  if (avatar) {
-    const div = document.createElement('div');
-    div.className = 'avatar-wrapper';
-
-    const img = document.createElement('img');
-    img.className = 'avatar';
-    img.src = avatar;
-    img.alt = 'Brand logo';
-    div.appendChild(img);
-
-    group_message.appendChild(div);
-  }
-
-  const message_span = document.createElement('span');
-  message_span.className = `message ${position}`;
-  group_message.appendChild(message_span);
-
-  message_span.appendChild(typing);
-
-  container.appendChild(group_message);
-
-  return wrapper;
-}
-
-function launcher_component({
-  avatar,
-  color,
-  position = 'right',
-  on_toggle = () => {},
-}) {
-  const button = document.createElement('button');
-  button.className = `launcher ${position}`;
-  button.style.setProperty('--color', color);
-  button.innerHTML = `<img src="${avatar}" alt="Brand logo" />`;
-
-  button.addEventListener('click', on_toggle);
-
-  return button;
-}
-
-function composer_component({
-  message_state,
-  disabled_submit_state,
-  placeholder = '',
-  on_send = () => {},
-  on_type = () => {},
-}) {
-  const wrapper = document.createElement('div');
-  const container = document.createElement('div');
-  const editor = document.createElement('div');
-  const expanded = document.createElement('div');
-  const content = document.createElement('div');
-  const textarea = document.createElement('div');
-  const action = document.createElement('div');
-  const button = document.createElement('button');
-
-  const input_invalid = signal.create_memo(
-    () => message_state().length === 0 || disabled_submit_state()
-  );
-
-  signal.create_effect(() => {
-    if (input_invalid()) {
-      button.disabled = input_invalid();
-      button.classList.add('disabled');
-    } else {
-      button.disabled = input_invalid();
-      button.classList.remove('disabled');
-    }
-  });
-
-  wrapper.className = 'composer-wrapper';
-
-  container.className = 'composer-container';
-  wrapper.appendChild(container);
-
-  editor.className = 'editor';
-  container.appendChild(editor);
-
-  expanded.className = 'expanded';
-  editor.appendChild(expanded);
-
-  content.className = 'content';
-  expanded.appendChild(content);
-
-  textarea.className = 'textarea';
-  textarea.contentEditable = true;
-  textarea.innerText = message_state();
-  textarea.setAttribute('placeholder', placeholder);
-  textarea.tabIndex = 0;
-  textarea.setAttribute('role', 'textbox');
-  content.appendChild(textarea);
-
-  action.className = 'action';
-  editor.appendChild(action);
-
-  button.classList.add('highlight');
-  button.disabled = disabled_submit_state();
-  button.innerHTML = `
-    <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
-      <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
-    </svg>`;
-  action.appendChild(button);
-
-  textarea.onkeyup = function (ev) {
-    on_type(textarea.textContent);
-
-    if (input_invalid()) {
-      ev.stopPropagation();
-      return;
-    }
-
-    if (ev.key === 'Enter' && ev.shiftKey) {
-      ev.stopPropagation();
-    } else if (ev.key === 'Enter') {
-      ev.preventDefault();
-      textarea.textContent = '';
-      return on_send(message_state());
-    }
-  };
-
-  button.onclick = function () {
-    if (input_invalid()) {
-      return;
-    }
-    textarea.textContent = '';
-    return on_send(message_state());
-  };
-
-  return wrapper;
-}
+import composer_component from './component/composer';
+import launcher_component from './component/launcher';
+import message_component from './component/message';
+import message_wrapper_component from './component/message-wrapper';
+import signature_component from './component/signature';
+import thead_component from './component/thead';
+import typing_component from './component/typing';
+import wrapper_component from './component/wrapper';
+
+import signal from './store/signal';
 
 class ChatApp {
   constructor(node, attributes) {
     this.node = node;
     this.attributes = attributes;
+
     this.init_node();
     this.init_attribute();
     this.init_state();
@@ -566,14 +208,23 @@ class ChatApp {
     }
   }
 }
-
 class DOMInitializer {
   constructor() {
-    [this.attribute_state, this.set_attribute_state] = signal.create_signal({
-      position: 'right',
-      theme: 'light',
-    });
+    this.init_node();
+    this.init_attribute();
 
+    this.create_meta_viewport();
+    this.create_meta_charset();
+    this.create_link_css();
+    this.create_style_tag();
+
+    signal.create_effect(() => {
+      this.position = this.attribute_state().orientation;
+      this.theme = this.attribute_state().theme;
+    });
+  }
+
+  init_node() {
     this.head = document.head;
     this.body = document.body;
     this.chat = document.getElementsByTagName('ss-chat')[0];
@@ -584,15 +235,12 @@ class DOMInitializer {
     this.style_tag = null;
     this.container = null;
     this.iframe = null;
+  }
 
-    this.create_meta_viewport();
-    this.create_meta_charset();
-    this.create_link_css();
-    this.create_style_tag();
-
-    signal.create_effect(() => {
-      this.position = this.attribute_state().orientation;
-      this.theme = this.attribute_state().theme;
+  init_attribute() {
+    [this.attribute_state, this.set_attribute_state] = signal.create_signal({
+      position: 'right',
+      theme: 'light',
     });
   }
 
