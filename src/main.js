@@ -11,6 +11,8 @@ import wrapper_component from './component/wrapper';
 
 import signal from './store/signal';
 
+import css from './style.css';
+
 class ChatApp {
   constructor(node, attributes) {
     this.node = node;
@@ -257,10 +259,8 @@ class DOMInitializer {
   }
 
   create_link_css() {
-    this.link_css = document.createElement('link');
-    this.link_css.href = 'http://127.0.0.1:5500/src/style.css';
-    this.link_css.rel = 'stylesheet';
-    this.link_css.type = 'text/css';
+    this.link_css = document.createElement('style');
+    this.link_css.textContent = css;
   }
 
   create_style_tag() {
