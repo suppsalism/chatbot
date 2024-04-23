@@ -37,14 +37,7 @@ const signal = {
   },
 };
 
-function wrapper_component({ type = 'overlay', mode = 'light' }) {
-  document.body.className = `theme-${mode}`;
-
-  function quad_in(t, b, c, d) {
-    t /= d;
-    return c * t * t + b;
-  }
-
+function wrapper_component({ type = 'overlay' }) {
   const wrapper = document.createElement('div');
   wrapper.className = `wrapper ${type}`;
   wrapper.innerHTML = `
@@ -52,12 +45,6 @@ function wrapper_component({ type = 'overlay', mode = 'light' }) {
         <div class="content"></div>
     </div>
   `;
-
-  wrapper.style.opacity = 0;
-  setTimeout(() => {
-    wrapper.style.transition = `opacity 150ms ${quad_in(0, 0, 1, 1)}`;
-    wrapper.style.opacity = 1;
-  }, 0);
 
   return wrapper;
 }
@@ -495,10 +482,7 @@ class ChatApp {
     // inject launcher layout
     document.body.appendChild(launcher);
 
-    const wrapper_node = wrapper_component({
-      position: this.orientation,
-      mode: this.theme,
-    });
+    const wrapper_node = wrapper_component({});
     const wrapper_slot = wrapper_node.querySelector('.content');
 
     // inject thead layout
@@ -665,7 +649,7 @@ class DOMInitializer {
   z-index: 2147483647;
   position: fixed;
   bottom: -1000px;
-  visibility: hidden;
+  opacity: 0;
   border-radius: 8px;
   box-shadow: 0 2px 5px 0 #c1c1c1;
   overflow: hidden;
@@ -677,7 +661,17 @@ class DOMInitializer {
   min-width: 100px;
   width: 445px;
   height: 664px;
-  visibility: visible;
+  opacity: 1;
+  animation: fadeInOpacity 0.15s ease-in 1;
+}
+
+@keyframes fadeInOpacity {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 @media only screen and (max-width: 768px) {
