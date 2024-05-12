@@ -178,7 +178,7 @@ class ChatApp {
     return fetch('http://127.0.0.1:5000/api/qa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: message, chatbot_key: this.chatbot_key }),
+      body: JSON.stringify({ query: message, key: this.chatbot_key }),
     })
       .then(async (response) => {
         const { answer } = await response.json();
