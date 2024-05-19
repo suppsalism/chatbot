@@ -7,23 +7,6 @@ Suppsalism Chatbot is an AI-powered library designed to provide an interactive q
 
 This library is built with multiple output formats (CJS, UMD, and ESM) to cater to different usage scenarios.
 
-## Building the Library
-
-Before integrating the chatbot into your application, ensure that the library files are built:
-
-```
-npm run build
-```
-
-This command compiles the source code into distributable formats under the dist folder.
-
-## Development
-
-To continuously watch and recompile the files during development:
-
-```
-npm run dev
-```
 
 ## Integration Steps
 
