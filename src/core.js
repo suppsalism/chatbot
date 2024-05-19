@@ -1,15 +1,17 @@
 'use strict';
 
-import composer_component from './component/composer';
-import launcher_component from './component/launcher';
-import message_component from './component/message';
-import message_wrapper_component from './component/message-wrapper';
-import signature_component from './component/signature';
-import thead_component from './component/thead';
-import typing_component from './component/typing';
-import wrapper_component from './component/wrapper';
+import composer_component from './lib/component/composer';
+import launcher_component from './lib/component/launcher';
+import message_component from './lib/component/message';
+import message_wrapper_component from './lib/component/message-wrapper';
+import signature_component from './lib/component/signature';
+import thead_component from './lib/component/thead';
+import typing_component from './lib/component/typing';
+import wrapper_component from './lib/component/wrapper';
 
-import signal from './store/signal';
+import signal from './lib/store/signal';
+
+import { API_URL } from './lib/constant';
 
 import css from './style.css';
 
@@ -175,9 +177,8 @@ class ChatApp {
     this.add_message({ message: message, is_response: false });
     this.set_disabled_submit_state(true);
 
-    return fetch('http://127.0.0.1:5000/api/qa', {
+    return fetch(`${API_URL}/qa`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: message, key: this.chatbot_key }),
     })
       .then(async (response) => {
@@ -382,7 +383,7 @@ class DOMInitializer {
   }
 
   setup_config() {
-    return fetch(`http://127.0.0.1:5000/api/chatbot/${this.chat.dataset.key}`)
+    return fetch(`${API_URL}/chatbot/${this.chat.dataset.key}`)
       .then((response) => response.json())
       .catch((error) => {
         throw new Error(`Failed to fetch chatbot: ${error.message}`);
