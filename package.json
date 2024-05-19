@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "author": "Suppsalism",
+  "license": "MIT",
+  "name": "@suppsalism/chatbot",
+  "description": "AI-powered chatbot",
+  "homepage": "https://github.com/suppsalism/chatbot",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suppsalism/chatbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/suppsalism/chatbot/issues"
+  },
+  "main": "./src/core.min.js",
+  "files": [
+    "src",
+    "LICENSE.md",
+    "README.md"
+  ],
+  "scripts": {},
+  "keywords": [
+    "chat",
+    "chatbot",
+    "suppsalism",
+    "ai"
+  ],
+  "verb": {
+    "tasks": [
+      "readme"
+    ],
+    "reflinks": [
+      "verb"
+    ],
+    "lint": {
+      "reflinks": true
+    }
+  },
+  "devDependencies": {},
+  "directories": {}
+}
