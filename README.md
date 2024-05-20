@@ -21,7 +21,7 @@ Add the following script tag in the <head> section of your HTML pages where the 
   type="text/javascript"
   id="suppsalism-script-loader"
   async
-  src="SUPPSALISM_CDN_CHATBOT_LIBRARY"
+  src="https://cdn.jsdelivr.net/npm/suppsalism@1.0.0/src/core.min.js"
 ></script>
 ```
 
