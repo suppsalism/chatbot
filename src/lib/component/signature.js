@@ -3,7 +3,7 @@ export default function signature_component() {
   wrapper.className = 'signature-wrapper';
 
   wrapper.innerHTML = `
-      <span>Powered by suppsalism</span>
+      <a class="signature" href="https://suppsalism.com">Powered by suppsalism</a>
     `;
 
   return wrapper;

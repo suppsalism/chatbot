@@ -198,15 +198,17 @@ body.theme-dark .signature-wrapper {
   background-color: rgba(34, 37, 41, 1);
 }
 
-.signature-wrapper span {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 30px;
+.signature-wrapper {
+  text-align: center;
+  padding: 6px 0;
+}
+
+.signature-wrapper .signature {
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 600;
   color: #949697;
+  text-decoration: none;
 }
 /* END: signature component */
 
