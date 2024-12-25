@@ -200,7 +200,7 @@ body.theme-dark .signature-wrapper {
 
 .signature-wrapper {
   text-align: center;
-  padding: 6px 0;
+  padding-bottom: 6px;
 }
 
 .signature-wrapper .signature {
