@@ -37,7 +37,7 @@ class ChatApp {
       this.conversation_state().forEach(
         ({ avatar, message, position, typing }) => {
           if (typing) {
-            this.typing = this.node
+            this.typing = this.message_wrapper_component
               .querySelector('.message-wrapper-container')
               .appendChild(
                 typing_component({
@@ -51,15 +51,17 @@ class ChatApp {
             if (this.typing) {
               this.typing.remove();
             }
-            this.node.querySelector('.message-wrapper-container').appendChild(
-              message_component({
-                avatar,
-                message,
-                position,
-                typing,
-                color: this.brand_color,
-              })
-            );
+
+            this.message_component = message_component({
+              avatar,
+              message,
+              position,
+              typing,
+              color: this.brand_color,
+            });
+            this.message_wrapper_component
+              .querySelector('.message-wrapper-container')
+              .appendChild(this.message_component);
           }
         }
       );
@@ -71,14 +73,13 @@ class ChatApp {
       'suppsalism-messages-iframe-container'
     );
 
-    this.wrapper_component = null;
+    this.launcher_component = null;
     this.thead_component = null;
-    this.signature_component = null;
     this.message_wrapper_component = null;
     this.message_component = null;
     this.typing_component = null;
-    this.launcher_component = null;
     this.composer_component = null;
+    this.signature_component = null;
   }
 
   init_attribute() {
@@ -88,7 +89,7 @@ class ChatApp {
       display_name: this.attributes.display_name,
       initial_messages: this.attributes.initial_messages,
       suggested_message: this.attributes.suggested_message, // NOT USED YET
-      message_placeholder: this.attributes.message_placeholder, // NOT USED YET
+      message_placeholder: this.attributes.message_placeholder,
       text_footer: this.attributes.text_footer, // NOT USED YET
       brand_color: this.attributes.brand_color,
       brand_name: this.attributes.brand_name,
@@ -121,7 +122,11 @@ class ChatApp {
   }
 
   init_component() {
-    const launcher = launcher_component({
+    const wrapper_node = wrapper_component({});
+    const wrapper_slot = wrapper_node.querySelector('.content');
+
+    // inject launcher layout
+    this.launcher_component = launcher_component({
       avatar: this.launcher_logo,
       color: this.brand_color,
       position: this.orientation,
@@ -129,46 +134,40 @@ class ChatApp {
         this.set_chat_visible(!this.chat_visible());
       },
     });
-
-    // inject launcher layout
-    document.body.appendChild(launcher);
-
-    const wrapper_node = wrapper_component({});
-    const wrapper_slot = wrapper_node.querySelector('.content');
+    document.body.appendChild(this.launcher_component);
 
     // inject thead layout
-    wrapper_slot.appendChild(
-      thead_component({
-        avatar: this.brand_logo,
-        name: this.brand_name,
-        on_close: () => {
-          this.set_chat_visible(false);
-        },
-      })
-    );
+    this.thead_component = thead_component({
+      avatar: this.brand_logo,
+      name: this.brand_name,
+      on_close: () => {
+        this.set_chat_visible(false);
+      },
+    });
+    wrapper_slot.appendChild(this.thead_component);
 
     // inject message layout
-    const message_wrapper_node = message_wrapper_component({});
-    wrapper_slot.appendChild(message_wrapper_node);
+    this.message_wrapper_component = message_wrapper_component({});
+    wrapper_slot.appendChild(this.message_wrapper_component);
 
     // inject composer layout
-    wrapper_slot.appendChild(
-      composer_component({
-        placeholder: this.message_placeholder,
-        message: this.message_state,
-        disabled_submit: this.disabled_submit_state,
-        on_send: (value) => {
-          return this.send_message(value);
-        },
-        on_type: (value) => {
-          return this.type_message(value);
-        },
-      })
-    );
+    this.composer_component = composer_component({
+      placeholder: this.message_placeholder,
+      message: this.message_state,
+      disabled_submit: this.disabled_submit_state,
+      on_send: (value) => {
+        return this.send_message(value);
+      },
+      on_type: (value) => {
+        return this.type_message(value);
+      },
+    });
+    wrapper_slot.appendChild(this.composer_component);
 
     // inject signature layout
     if (this.signature_visible) {
-      wrapper_slot.appendChild(signature_component());
+      this.signature_component = signature_component();
+      wrapper_slot.appendChild(this.signature_component);
     }
 
     this.node.appendChild(wrapper_node);
@@ -380,13 +379,15 @@ class DOMInitializer {
 
     this.container.appendChild(this.iframe);
 
-    this.iframe.contentWindow.document.body.setAttribute(
-      'class',
-      `theme-${this.attribute_state().theme}`
-    );
-    this.iframe.contentWindow.document.head.appendChild(this.meta_charset);
-    this.iframe.contentWindow.document.head.appendChild(this.meta_viewport);
-    this.iframe.contentWindow.document.head.appendChild(this.link_css);
+    setTimeout(() => {
+      this.iframe.contentWindow.document.head.appendChild(this.meta_charset);
+      this.iframe.contentWindow.document.head.appendChild(this.meta_viewport);
+      this.iframe.contentWindow.document.head.appendChild(this.link_css);
+      this.iframe.contentWindow.document.body.setAttribute(
+        'class',
+        `theme-${this.attribute_state().theme}`
+      );
+    }, 0);
   }
 
   setup_config() {
@@ -398,10 +399,12 @@ class DOMInitializer {
   }
 
   build_chatbot() {
-    new ChatApp(
-      this.iframe.contentWindow.document.body,
-      this.attribute_state()
-    );
+    setTimeout(() => {
+      new ChatApp(
+        this.iframe.contentWindow.document.body,
+        this.attribute_state()
+      );
+    }, 0);
   }
 
   execute() {
@@ -414,6 +417,8 @@ class DOMInitializer {
       })
       .then(() => {
         this.setup_container();
+      })
+      .then(() => {
         this.setup_iframe();
       })
       .then(() => {
