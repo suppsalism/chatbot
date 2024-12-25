@@ -1,8 +1,8 @@
 import signal from '../store/signal';
 
 export default function composer_component({
-  message_state,
-  disabled_submit_state,
+  message, // flagged as a bindable state property
+  disabled_submit, // flagged as a bindable state property
   placeholder = '',
   on_send = () => {},
   on_type = () => {},
@@ -17,7 +17,7 @@ export default function composer_component({
   const button = document.createElement('button');
 
   const input_invalid = signal.create_memo(
-    () => message_state().length === 0 || disabled_submit_state()
+    () => message().length === 0 || disabled_submit()
   );
 
   signal.create_effect(() => {
@@ -46,7 +46,7 @@ export default function composer_component({
 
   textarea.className = 'textarea';
   textarea.contentEditable = true;
-  textarea.innerText = message_state();
+  textarea.innerText = message();
   textarea.setAttribute('placeholder', placeholder);
   textarea.tabIndex = 0;
   textarea.setAttribute('role', 'textbox');
@@ -56,14 +56,14 @@ export default function composer_component({
   editor.appendChild(action);
 
   button.classList.add('highlight');
-  button.disabled = disabled_submit_state();
+  button.disabled = disabled_submit();
   button.innerHTML = `
       <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
         <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
       </svg>`;
   action.appendChild(button);
 
-  textarea.onkeyup = function (ev) {
+  textarea.onkeydown = function (ev) {
     on_type(textarea.innerText);
 
     if (input_invalid()) {
@@ -76,7 +76,7 @@ export default function composer_component({
     } else if (ev.key === 'Enter') {
       ev.preventDefault();
       textarea.innerText = '';
-      return on_send(message_state());
+      return on_send(message());
     }
   };
 
@@ -85,7 +85,7 @@ export default function composer_component({
       return;
     }
     textarea.innerText = '';
-    return on_send(message_state());
+    return on_send(message());
   };
 
   return wrapper;

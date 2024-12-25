@@ -45,11 +45,19 @@ export default function message_component({
   const group_message = document.createElement('div');
   group_message.className = 'group-message';
 
-  if (avatar) {
-    const div = document.createElement('div');
-    div.className = 'avatar-wrapper';
+  const div = document.createElement('div');
+  div.className = 'avatar-wrapper';
 
+  if (avatar) {
     const img = document.createElement('img');
+    img.className = 'avatar';
+    img.src = avatar;
+    img.alt = 'Brand logo';
+    div.appendChild(img);
+
+    group_message.appendChild(div);
+  } else {
+    const img = document.createElement('div');
     img.className = 'avatar';
     img.src = avatar;
     img.alt = 'Brand logo';

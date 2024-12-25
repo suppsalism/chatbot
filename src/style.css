@@ -334,6 +334,9 @@ body.theme-dark .message-wrapper .message-container .message.left {
 
 /* START: launcher component*/
 .launcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   border: none;
   height: 64px;
@@ -341,8 +344,15 @@ body.theme-dark .message-wrapper .message-container .message.left {
   background-color: var(--color);
   cursor: pointer;
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 42px;
+}
+
+.launcher.right {
+  right: 25px;
+}
+
+.launcher.left {
+  left: 25px;
 }
 
 .launcher img {

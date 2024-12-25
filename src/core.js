@@ -9,9 +9,9 @@ import thead_component from './lib/component/thead';
 import typing_component from './lib/component/typing';
 import wrapper_component from './lib/component/wrapper';
 
-import signal from './lib/store/signal';
-
 import { API_URL } from './lib/constant';
+import { generate_uuid } from './lib/helper';
+import signal from './lib/store/signal';
 
 import css from './style.css';
 
@@ -83,20 +83,22 @@ class ChatApp {
 
   init_attribute() {
     Object.assign(this, {
-      brand_color: this.attributes.brand_color,
-      brand_logo_url: this.attributes.brand_logo_url,
-      brand_name: this.attributes.brand_name,
+      session_id: this.attributes.session_id,
       chatbot_key: this.attributes.chatbot_key,
-      description: this.attributes.description,
-      headline: this.attributes.headline,
-      hosted_url: this.attributes.hosted_url,
-      input_placeholder: this.attributes.input_placeholder,
-      launcher_logo_url: this.attributes.launcher_logo_url,
-      name: this.attributes.name,
+      display_name: this.attributes.display_name,
+      initial_messages: this.attributes.initial_messages,
+      suggested_message: this.attributes.suggested_message, // NOT USED YET
+      message_placeholder: this.attributes.message_placeholder, // NOT USED YET
+      text_footer: this.attributes.text_footer, // NOT USED YET
+      brand_color: this.attributes.brand_color,
+      brand_name: this.attributes.brand_name,
+      brand_logo: this.attributes.brand_logo,
+      launcher_logo: this.attributes.launcher_logo,
+      theme: this.attributes.theme,
       orientation: this.attributes.orientation,
       signature_visible: this.attributes.signature_visible,
-      theme: this.attributes.theme,
-      welcome_message: this.attributes.welcome_message,
+      collect_user_feedback: this.attributes.collect_user_feedback, // NOT USED YET
+      regenerate_message: this.attributes.regenerate_message, // NOT USED YET
     });
   }
 
@@ -107,9 +109,12 @@ class ChatApp {
     [this.chat_visible, this.set_chat_visible] = signal.create_signal(false);
     [this.conversation_state, this.set_conversation_state] =
       signal.create_signal(
-        this.welcome_message.map((msg) => ({
-          avatar: this.brand_logo_url,
-          message: msg,
+        this.initial_messages.map((message, index) => ({
+          avatar:
+            this.initial_messages.length - 1 === index
+              ? this.brand_logo
+              : undefined,
+          message: message,
           position: 'left',
         }))
       );
@@ -117,7 +122,7 @@ class ChatApp {
 
   init_component() {
     const launcher = launcher_component({
-      avatar: this.launcher_logo_url,
+      avatar: this.launcher_logo,
       color: this.brand_color,
       position: this.orientation,
       on_toggle: () => {
@@ -134,7 +139,7 @@ class ChatApp {
     // inject thead layout
     wrapper_slot.appendChild(
       thead_component({
-        avatar: this.brand_logo_url,
+        avatar: this.brand_logo,
         name: this.brand_name,
         on_close: () => {
           this.set_chat_visible(false);
@@ -149,9 +154,9 @@ class ChatApp {
     // inject composer layout
     wrapper_slot.appendChild(
       composer_component({
-        placeholder: this.input_placeholder,
-        message_state: this.message_state,
-        disabled_submit_state: this.disabled_submit_state,
+        placeholder: this.message_placeholder,
+        message: this.message_state,
+        disabled_submit: this.disabled_submit_state,
         on_send: (value) => {
           return this.send_message(value);
         },
@@ -179,7 +184,11 @@ class ChatApp {
 
     return fetch(`${API_URL}/qa`, {
       method: 'POST',
-      body: JSON.stringify({ query: message, key: this.chatbot_key }),
+      body: JSON.stringify({
+        session: this.session_id,
+        key: this.chatbot_key,
+        query: message,
+      }),
     })
       .then(async (response) => {
         const { answer } = await response.json();
@@ -197,12 +206,12 @@ class ChatApp {
     if (!is_response) {
       this.set_conversation_state([
         { message: message, position: 'right', typing: false },
-        { avatar: this.brand_logo_url, typing: true, position: 'left' },
+        { avatar: this.brand_logo, typing: true, position: 'left' },
       ]);
     } else {
       this.set_conversation_state([
         {
-          avatar: this.brand_logo_url,
+          avatar: this.brand_logo,
           message: message,
           position: 'left',
           typing: false,
@@ -220,11 +229,6 @@ class DOMInitializer {
     this.create_meta_charset();
     this.create_link_css();
     this.create_style_tag();
-
-    signal.create_effect(() => {
-      this.position = this.attribute_state().orientation;
-      this.theme = this.attribute_state().theme;
-    });
   }
 
   init_node() {
@@ -242,8 +246,8 @@ class DOMInitializer {
 
   init_attribute() {
     [this.attribute_state, this.set_attribute_state] = signal.create_signal({
-      position: 'right',
-      theme: 'light',
+      session_id: this.chat.dataset.session || generate_uuid(),
+      chatbot_key: this.chat.dataset.key,
     });
   }
 
@@ -268,6 +272,9 @@ class DOMInitializer {
     this.style_tag = document.createElement('style');
     this.style_tag.textContent = `
 .launcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   border: none;
   height: 64px;
@@ -359,7 +366,7 @@ class DOMInitializer {
     this.container.setAttribute('role', 'region');
     this.container.setAttribute('aria-label', 'Chat Widget');
     this.container.id = 'suppsalism-messages-iframe-container';
-    this.container.className = `${this.position}`;
+    this.container.className = `${this.attribute_state().orientation}`;
 
     this.head.appendChild(this.style_tag);
     this.body.appendChild(this.container);
@@ -375,7 +382,7 @@ class DOMInitializer {
 
     this.iframe.contentWindow.document.body.setAttribute(
       'class',
-      `theme-${this.theme}`
+      `theme-${this.attribute_state().theme}`
     );
     this.iframe.contentWindow.document.head.appendChild(this.meta_charset);
     this.iframe.contentWindow.document.head.appendChild(this.meta_viewport);
@@ -383,7 +390,7 @@ class DOMInitializer {
   }
 
   setup_config() {
-    return fetch(`${API_URL}/chatbot/${this.chat.dataset.key}`)
+    return fetch(`${API_URL}/chatbot/${this.attribute_state().chatbot_key}`)
       .then((response) => response.json())
       .catch((error) => {
         throw new Error(`Failed to fetch chatbot: ${error.message}`);
@@ -400,7 +407,10 @@ class DOMInitializer {
   execute() {
     return this.setup_config()
       .then((attributes) => {
-        this.set_attribute_state(attributes);
+        this.set_attribute_state({
+          ...this.attribute_state(),
+          ...attributes,
+        });
       })
       .then(() => {
         this.setup_container();
