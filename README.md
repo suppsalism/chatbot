@@ -21,7 +21,7 @@ Add the following script tag in the <head> section of your HTML pages where the 
   async
   type="text/javascript"
   id="suppsalism-script-loader"
-  src="https://cdn.jsdelivr.net/npm/suppsalism@1.0.0/src/core.min.js"
+  src="https://cdn.jsdelivr.net/npm/suppsalism@<version>/src/core.min.js"
 ></script>
 ```
 
