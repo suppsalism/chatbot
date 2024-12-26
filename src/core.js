@@ -5,6 +5,8 @@ import launcher_component from './lib/component/launcher';
 import message_component from './lib/component/message';
 import message_wrapper_component from './lib/component/message-wrapper';
 import signature_component from './lib/component/signature';
+import suggestion_component from './lib/component/suggestion';
+import suggestion_wrapper_component from './lib/component/suggestion-wrapper';
 import thead_component from './lib/component/thead';
 import typing_component from './lib/component/typing';
 import wrapper_component from './lib/component/wrapper';
@@ -37,19 +39,18 @@ class ChatApp {
       this.conversation_state().forEach(
         ({ avatar, message, position, typing }) => {
           if (typing) {
-            this.typing = this.message_wrapper_component
+            this.typing_component = typing_component({
+              position: 'left',
+              avatar: this.brand_logo,
+            });
+            this.message_wrapper_component
               .querySelector('.message-wrapper-container')
-              .appendChild(
-                typing_component({
-                  avatar,
-                  position,
-                  color: this.brand_color,
-                })
-              );
+              .appendChild(this.typing_component);
+
             return;
           } else {
-            if (this.typing) {
-              this.typing.remove();
+            if (this.typing_component) {
+              this.typing_component.remove();
             }
 
             this.message_component = message_component({
@@ -78,6 +79,7 @@ class ChatApp {
     this.message_wrapper_component = null;
     this.message_component = null;
     this.typing_component = null;
+    this.suggestion_wrapper_component = null;
     this.composer_component = null;
     this.signature_component = null;
   }
@@ -88,7 +90,7 @@ class ChatApp {
       chatbot_key: this.attributes.chatbot_key,
       display_name: this.attributes.display_name,
       initial_messages: this.attributes.initial_messages,
-      suggested_message: this.attributes.suggested_message, // NOT USED YET
+      suggested_message: this.attributes.suggested_message,
       message_placeholder: this.attributes.message_placeholder,
       text_footer: this.attributes.text_footer, // NOT USED YET
       brand_color: this.attributes.brand_color,
@@ -150,16 +152,32 @@ class ChatApp {
     this.message_wrapper_component = message_wrapper_component({});
     wrapper_slot.appendChild(this.message_wrapper_component);
 
+    // inject suggestion layout
+    this.suggestion_wrapper_component = suggestion_wrapper_component({});
+    this.suggested_message.forEach((message) => {
+      this.suggestion_wrapper_component
+        .querySelector('.suggestion-wrapper-content')
+        .appendChild(
+          suggestion_component({
+            text: message,
+            on_click: () => {
+              this.send_message(message);
+            },
+          })
+        );
+    });
+    wrapper_slot.appendChild(this.suggestion_wrapper_component);
+
     // inject composer layout
     this.composer_component = composer_component({
       placeholder: this.message_placeholder,
       message: this.message_state,
       disabled_submit: this.disabled_submit_state,
       on_send: (value) => {
-        return this.send_message(value);
+        this.send_message(value);
       },
       on_type: (value) => {
-        return this.type_message(value);
+        this.type_message(value);
       },
     });
     wrapper_slot.appendChild(this.composer_component);
@@ -178,6 +196,8 @@ class ChatApp {
   }
 
   send_message(message) {
+    if (this.disabled_submit_state()) return;
+
     this.add_message({ message: message, is_response: false });
     this.set_disabled_submit_state(true);
 
@@ -234,6 +254,7 @@ class DOMInitializer {
     this.head = document.head;
     this.body = document.body;
     this.chat = document.getElementsByTagName('ss-chat')[0];
+    if (!this.chat) throw new Error('Chat element not found!');
 
     this.meta_viewport = null;
     this.meta_charset = null;
@@ -280,7 +301,7 @@ class DOMInitializer {
   width: 64px;
   background-color: var(--color);
   cursor: pointer;
-  position: absolute;
+  position: fixed;
   bottom: 42px;
 }
 

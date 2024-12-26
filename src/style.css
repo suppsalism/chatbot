@@ -75,7 +75,7 @@ body.theme-dark .typing {
 }
 
 .typing {
-  border-radius: 20px;
+  border-radius: 99px;
   padding: 5px 8px;
   display: flex;
   align-items: center;
@@ -575,3 +575,40 @@ body.theme-dark
   border-radius: 20px;
 }
 /* END: composer component */
+
+/* START: suggestion component */
+body.theme-light .suggestion {
+  color: #1c1c1c;
+  background-color: #f4f4f4;
+  border: 1px solid #e2e2e2;
+}
+
+body.theme-light .suggestion:hover {
+  background-color: #e2e2e2;
+}
+
+body.theme-dark .suggestion {
+  color: #c1c1c1;
+  background-color: rgb(50, 53, 56);
+  border: 1px solid rgb(50, 53, 56);
+}
+
+.suggestion {
+  padding: 8px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* END: suggestion component */
+
+/* START: suggestion wrapper component */
+.suggestion-wrapper-wrapper
+  .suggestion-wrapper-container
+  .suggestion-wrapper-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 16px;
+}
+/* END: suggestion wrapper component */
