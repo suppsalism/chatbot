@@ -1,80 +1,89 @@
-export default function message_component({
-  position,
-  message,
-  avatar,
-  color = '#fff',
-}) {
-  function hex_to_rgb(hex) {
-    let r = 0,
-      g = 0,
-      b = 0;
-    if (hex.length === 4) {
-      r = parseInt(hex[1] + hex[1], 16);
-      g = parseInt(hex[2] + hex[2], 16);
-      b = parseInt(hex[3] + hex[3], 16);
-    } else if (hex.length === 7) {
-      r = parseInt(hex.substring(1, 3), 16);
-      g = parseInt(hex.substring(3, 5), 16);
-      b = parseInt(hex.substring(5, 7), 16);
+import { getTextColorForBackground } from '../helper';
+import { CLASS } from '../constants/dom';
+import { Feedback } from './feedback';
+
+export class Message {
+  constructor({
+    doc,
+    role, // 'user' | 'agent'
+    text,
+    avatar,
+    brandColor = '#2563eb',
+    error = false,
+    messageId,
+    onFeedback,
+  }) {
+    this.doc = doc;
+    this.role = role;
+    this.avatar = avatar;
+    this.brandColor = brandColor;
+    this.error = error;
+    this.messageId = messageId;
+    this.onFeedback = onFeedback;
+    this.children = [];
+
+    this.build(text);
+  }
+
+  build(text) {
+    const position = this.role === 'user' ? CLASS.messageRight : CLASS.messageLeft;
+
+    const wrapper = this.doc.createElement('div');
+    wrapper.className = `${CLASS.messageWrapper} ${position}`;
+    wrapper.style.setProperty('--ss-bg-color', this.brandColor);
+    wrapper.style.setProperty('--ss-txt-color', getTextColorForBackground(this.brandColor));
+
+    const container = this.doc.createElement('div');
+    container.className = CLASS.messageContainer;
+    wrapper.appendChild(container);
+
+    const group = this.doc.createElement('div');
+    group.className = CLASS.messageGroup;
+    container.appendChild(group);
+
+    if (this.role === 'agent') {
+      const avatarWrapper = this.doc.createElement('div');
+      avatarWrapper.className = CLASS.messageAvatarWrapper;
+
+      if (this.avatar) {
+        const img = this.doc.createElement('img');
+        img.className = CLASS.messageAvatar;
+        img.src = this.avatar;
+        img.alt = 'Brand logo';
+        avatarWrapper.appendChild(img);
+      }
+
+      group.appendChild(avatarWrapper);
     }
-    return { r, g, b };
+
+    const bubble = this.doc.createElement('span');
+    bubble.className = `${CLASS.message} ${position}${this.error ? ` ${CLASS.messageError}` : ''}`;
+    group.appendChild(bubble);
+
+    const textSpan = this.doc.createElement('span');
+    textSpan.textContent = text;
+    bubble.appendChild(textSpan);
+
+    if (this.onFeedback) {
+      const feedback = new Feedback({
+        doc: this.doc,
+        messageId: this.messageId,
+        onSubmit: this.onFeedback,
+      });
+      this.children.push(feedback);
+      container.appendChild(feedback.element);
+    }
+
+    this.element = wrapper;
+    this.textSpan = textSpan;
   }
 
-  function calculate_brightness({ r, g, b }) {
-    return 0.299 * r + 0.587 * g + 0.114 * b;
+  setText(text) {
+    this.textSpan.textContent = text;
   }
 
-  function get_text_color_for_bg(hex_color) {
-    const rgb = hex_color.startsWith('#')
-      ? hex_to_rgb(hex_color)
-      : hex_color.match(/\d+/g).map(Number);
-    const brightness = calculate_brightness(rgb);
-
-    return brightness > 128 ? '#000' : '#fff';
+  destroy() {
+    this.children.forEach((child) => child.destroy());
+    this.element.remove();
   }
-
-  const wrapper = document.createElement('div');
-  wrapper.className = `message-wrapper ${position}`;
-  wrapper.style.setProperty('--bg-color', color);
-  wrapper.style.setProperty('--txt-color', get_text_color_for_bg(color));
-
-  const container = document.createElement('div');
-  container.className = 'message-container';
-  wrapper.appendChild(container);
-
-  const group_message = document.createElement('div');
-  group_message.className = 'group-message';
-
-  const div = document.createElement('div');
-  div.className = 'avatar-wrapper';
-
-  if (avatar) {
-    const img = document.createElement('img');
-    img.className = 'avatar';
-    img.src = avatar;
-    img.alt = 'Brand logo';
-    div.appendChild(img);
-
-    group_message.appendChild(div);
-  } else {
-    const img = document.createElement('div');
-    img.className = 'avatar';
-    img.src = avatar;
-    img.alt = 'Brand logo';
-    div.appendChild(img);
-
-    group_message.appendChild(div);
-  }
-
-  const message_span = document.createElement('span');
-  message_span.className = `message ${position}`;
-  group_message.appendChild(message_span);
-
-  const textSpan = document.createElement('span');
-  textSpan.textContent = message;
-  message_span.appendChild(textSpan);
-
-  container.appendChild(group_message);
-
-  return wrapper;
 }

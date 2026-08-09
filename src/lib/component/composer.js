@@ -1,92 +1,110 @@
-import signal from '../store/signal';
+import { createEffect, createMemo } from '../store/signal';
+import { CLASS } from '../constants/dom';
+import { createIcon } from '../helper';
 
-export default function composer_component({
-  message, // flagged as a bindable state property
-  disabled_submit, // flagged as a bindable state property
-  placeholder = '',
-  on_send = () => {},
-  on_type = () => {},
-}) {
-  const wrapper = document.createElement('div');
-  const container = document.createElement('div');
-  const editor = document.createElement('div');
-  const expanded = document.createElement('div');
-  const content = document.createElement('div');
-  const textarea = document.createElement('div');
-  const action = document.createElement('div');
-  const button = document.createElement('button');
+const SEND_ICON_PATH = 'M2,21L23,12L2,3V10L17,12L2,14V21Z';
 
-  const input_invalid = signal.create_memo(
-    () => message().length === 0 || disabled_submit()
-  );
+export class Composer {
+  constructor({ doc, message, setMessage, disabledSubmit, placeholder = '', onSend = () => {} }) {
+    this.doc = doc;
+    this.message = message;
+    this.setMessage = setMessage;
+    this.disabledSubmit = disabledSubmit;
+    this.placeholder = placeholder;
+    this.onSend = onSend;
+    this.listeners = [];
+    this.disposeEffects = [];
 
-  signal.create_effect(() => {
-    if (input_invalid()) {
-      button.disabled = input_invalid();
-      button.classList.add('disabled');
-    } else {
-      button.disabled = input_invalid();
-      button.classList.remove('disabled');
-    }
-  });
+    this.build();
+  }
 
-  wrapper.className = 'composer-wrapper';
+  on(node, event, handler) {
+    node.addEventListener(event, handler);
+    this.listeners.push([node, event, handler]);
+  }
 
-  container.className = 'composer-container';
-  wrapper.appendChild(container);
+  build() {
+    const wrapper = this.doc.createElement('div');
+    wrapper.className = CLASS.composerWrapper;
 
-  editor.className = 'editor';
-  container.appendChild(editor);
+    const container = this.doc.createElement('div');
+    container.className = CLASS.composerContainer;
+    wrapper.appendChild(container);
 
-  expanded.className = 'expanded';
-  editor.appendChild(expanded);
+    const editor = this.doc.createElement('div');
+    editor.className = CLASS.composerEditor;
+    container.appendChild(editor);
 
-  content.className = 'content';
-  expanded.appendChild(content);
+    const expanded = this.doc.createElement('div');
+    expanded.className = CLASS.composerExpanded;
+    editor.appendChild(expanded);
 
-  textarea.className = 'textarea';
-  textarea.contentEditable = true;
-  textarea.innerText = message();
-  textarea.setAttribute('placeholder', placeholder);
-  textarea.tabIndex = 0;
-  textarea.setAttribute('role', 'textbox');
-  content.appendChild(textarea);
+    const content = this.doc.createElement('div');
+    content.className = CLASS.composerContent;
+    expanded.appendChild(content);
 
-  action.className = 'action';
-  editor.appendChild(action);
+    const textarea = this.doc.createElement('div');
+    textarea.className = CLASS.composerTextarea;
+    textarea.contentEditable = 'true';
+    textarea.setAttribute('placeholder', this.placeholder);
+    textarea.tabIndex = 0;
+    textarea.setAttribute('role', 'textbox');
+    content.appendChild(textarea);
 
-  button.classList.add('highlight');
-  button.disabled = disabled_submit();
-  button.innerHTML = `
-      <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
-        <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
-      </svg>`;
-  action.appendChild(button);
+    const action = this.doc.createElement('div');
+    action.className = CLASS.composerAction;
+    editor.appendChild(action);
 
-  textarea.onkeydown = function (ev) {
-    on_type(textarea.innerText);
+    const button = this.doc.createElement('button');
+    button.className = CLASS.composerHighlight;
+    button.appendChild(createIcon(this.doc, { path: SEND_ICON_PATH, size: 20 }));
+    action.appendChild(button);
 
-    if (input_invalid()) {
-      ev.stopPropagation();
-      return;
-    }
+    const inputInvalid = createMemo(() => this.message().length === 0 || this.disabledSubmit());
 
-    if (ev.key === 'Enter' && ev.shiftKey) {
-      ev.stopPropagation();
-    } else if (ev.key === 'Enter') {
-      ev.preventDefault();
-      textarea.innerText = '';
-      return on_send(message());
-    }
-  };
+    this.disposeEffects.push(
+      createEffect(() => {
+        button.disabled = inputInvalid();
+        button.classList.toggle(CLASS.composerDisabled, inputInvalid());
+      })
+    );
+    this.disposeEffects.push(
+      createEffect(() => {
+        textarea.contentEditable = this.disabledSubmit() ? 'false' : 'true';
+        wrapper.classList.toggle(CLASS.composerDisabled, this.disabledSubmit());
+      })
+    );
 
-  button.onclick = function () {
-    if (input_invalid()) {
-      return;
-    }
-    textarea.innerText = '';
-    return on_send(message());
-  };
+    const send = () => {
+      if (inputInvalid()) return;
+      const text = this.message();
+      textarea.textContent = '';
+      this.setMessage('');
+      this.onSend(text);
+    };
 
-  return wrapper;
+    this.on(textarea, 'input', () => this.setMessage(textarea.textContent));
+    this.on(textarea, 'keydown', (event) => {
+      if (event.key === 'Enter' && event.shiftKey) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        send();
+      }
+    });
+    this.on(button, 'click', send);
+
+    this.element = wrapper;
+    this.textarea = textarea;
+  }
+
+  setPlaceholder(placeholder) {
+    this.placeholder = placeholder;
+    this.textarea.setAttribute('placeholder', placeholder);
+  }
+
+  destroy() {
+    this.disposeEffects.forEach((dispose) => dispose());
+    this.listeners.forEach(([node, event, handler]) => node.removeEventListener(event, handler));
+    this.element.remove();
+  }
 }

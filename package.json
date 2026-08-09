@@ -1,25 +1,43 @@
 {
   "name": "@suppsalism/chatbot",
   "version": "1.0.0",
-  "description": "",
+  "description": "A pure UI and state package for a chat widget — zero runtime dependencies, no network calls. Bring your own onSendMessage.",
   "type": "module",
-  "source": "src/core.js",
+  "sideEffects": false,
+  "main": "./dist/chatbot.cjs",
+  "module": "./dist/chatbot.module.js",
+  "unpkg": "./dist/chatbot.umd.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    "require": "./dist/core.cjs",
-    "default": "./dist/core.modern.js"
+    ".": {
+      "require": "./dist/chatbot.cjs",
+      "default": "./dist/chatbot.modern.js"
+    },
+    "./style.css": "./src/widget.css"
   },
-  "main": "./dist/core.cjs",
-  "module": "./dist/core.module.js",
-  "unpkg": "./dist/core.umd.js",
+  "files": [
+    "dist",
+    "src/widget.css"
+  ],
   "scripts": {
-    "build": "microbundle",
-    "dev": "microbundle watch",
+    "build:lib": "microbundle -i src/index.js --format cjs,es,modern --css inline",
+    "build:umd": "microbundle -i src/umd.js --format umd --name SsChat --css inline",
+    "build": "npm run build:lib && npm run build:umd",
+    "dev": "microbundle watch -i src/index.js --format cjs,es,modern --css inline",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublish": "npm run build"
   },
-  "keywords": [],
+  "keywords": [
+    "chatbot",
+    "chat-widget",
+    "ui"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "microbundle": "^0.15.1"
+    "jsdom": "^29.1.1",
+    "microbundle": "^0.15.1",
+    "vitest": "^4.1.10"
   }
 }

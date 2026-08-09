@@ -1,11 +1,28 @@
-export default function wrapper_component({ type = 'overlay' }) {
-  const wrapper = document.createElement('div');
-  wrapper.className = `wrapper ${type}`;
-  wrapper.innerHTML = `
-      <div class="container">
-          <div class="content"></div>
-      </div>
-    `;
+import { CLASS } from '../constants/dom';
 
-  return wrapper;
+export class Wrapper {
+  constructor({ doc }) {
+    this.doc = doc;
+    this.build();
+  }
+
+  build() {
+    const wrapper = this.doc.createElement('div');
+    wrapper.className = CLASS.wrapper;
+
+    const container = this.doc.createElement('div');
+    container.className = CLASS.wrapperContainer;
+    wrapper.appendChild(container);
+
+    const content = this.doc.createElement('div');
+    content.className = CLASS.wrapperContent;
+    container.appendChild(content);
+
+    this.element = wrapper;
+    this.content = content;
+  }
+
+  destroy() {
+    this.element.remove();
+  }
 }

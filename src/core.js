@@ -1,455 +1,370 @@
-'use strict';
+import { Wrapper } from './lib/component/wrapper';
+import { Launcher } from './lib/component/launcher';
+import { Thead } from './lib/component/thead';
+import { MessageWrapper } from './lib/component/message-wrapper';
+import { SuggestionWrapper } from './lib/component/suggestion-wrapper';
+import { Composer } from './lib/component/composer';
+import { Signature } from './lib/component/signature';
+import { LeadForm } from './lib/component/lead-form';
 
-import composer_component from './lib/component/composer';
-import launcher_component from './lib/component/launcher';
-import message_component from './lib/component/message';
-import message_wrapper_component from './lib/component/message-wrapper';
-import signature_component from './lib/component/signature';
-import suggestion_component from './lib/component/suggestion';
-import suggestion_wrapper_component from './lib/component/suggestion-wrapper';
-import thead_component from './lib/component/thead';
-import typing_component from './lib/component/typing';
-import wrapper_component from './lib/component/wrapper';
+import { resolveConfig } from './lib/config/resolve';
+import { splitOptions } from './lib/config/split-options';
 
-import { API_URL } from './lib/constant';
-import { generate_uuid } from './lib/helper';
-import signal from './lib/store/signal';
+import { mountShell } from './lib/mount/shell';
+import { mountIframe } from './lib/mount/iframe';
 
-import css from './style.css';
+import { initState, bindEffects } from './lib/state';
+import { submitMessage } from './lib/lifecycle';
+import { createRoot } from './lib/store/signal';
+import { generateUuid, isAttachedElement } from './lib/helper';
 
-class ChatApp {
-  constructor(node, attributes) {
-    this.node = node;
-    this.attributes = attributes;
+function reportError(callbacks, error, message) {
+  try {
+    callbacks.onMessageError?.(error, message);
+  } catch {
+    // an observer is never allowed to break the chat (spec §6.7)
+  }
+}
 
-    this.init_node();
-    this.init_attribute();
-    this.init_state();
-    this.init_component();
+/** Invokes an optional, fire-and-forget callback; a throw or rejection is routed to onMessageError. */
+function safeInvoke(fn, callbacks, ...args) {
+  if (!fn) return undefined;
+  try {
+    const result = fn(...args);
+    if (result && typeof result.catch === 'function') {
+      result.catch((error) => reportError(callbacks, error));
+    }
+    return result;
+  } catch (error) {
+    reportError(callbacks, error);
+    return undefined;
+  }
+}
 
-    signal.create_effect(() => {
-      if (this.chat_visible()) {
-        this.wrapper_iframe_node.classList.add('visible');
-      } else {
-        this.wrapper_iframe_node.classList.remove('visible');
+function buildComponents({ doc, shell, getConfig, state, callbacks, closeChat, toggleChat }) {
+  const wrapper = new Wrapper({ doc });
+
+  const launcher = new Launcher({
+    doc: shell.doc,
+    avatar: getConfig().avatar,
+    orientation: getConfig().orientation,
+    onToggle: toggleChat,
+  });
+  shell.element.appendChild(launcher.element);
+
+  const thead = new Thead({
+    doc,
+    avatar: getConfig().avatar,
+    name: getConfig().name,
+    onClose: closeChat,
+  });
+  wrapper.content.appendChild(thead.element);
+
+  const messageWrapper = new MessageWrapper({ doc });
+  wrapper.content.appendChild(messageWrapper.element);
+
+  const suggestionWrapper = new SuggestionWrapper({ doc });
+  wrapper.content.appendChild(suggestionWrapper.element);
+
+  const composer = new Composer({
+    doc,
+    message: state.message,
+    setMessage: state.setMessage,
+    disabledSubmit: state.disabledSubmit,
+    placeholder: getConfig().placeholder,
+    onSend: (text) => submitMessage({ text, config: getConfig(), view, state, callbacks }),
+  });
+  wrapper.content.appendChild(composer.element);
+
+  let leadForm = null;
+  if (getConfig().collectLeads) {
+    leadForm = new LeadForm({
+      doc,
+      onSubmit: (fields) => safeInvoke(callbacks.onLeadSubmit, callbacks, fields),
+    });
+    wrapper.content.appendChild(leadForm.element);
+  }
+
+  let signature = null;
+  if (getConfig().signature) {
+    signature = new Signature({ doc });
+    wrapper.content.appendChild(signature.element);
+  }
+
+  doc.body.appendChild(wrapper.element);
+
+  function handleSuggestionClick(text) {
+    const allow = safeInvoke(callbacks.onSuggestionClick, callbacks, text);
+    if (allow === false) return;
+    submitMessage({ text, config: getConfig(), view, state, callbacks });
+  }
+
+  getConfig().suggestedMessages.forEach((text) => {
+    suggestionWrapper.addSuggestion({ text, onClick: handleSuggestionClick });
+  });
+
+  const view = {
+    appendMessage({ role, text, messageId }) {
+      const config = getConfig();
+      return messageWrapper.appendMessage({
+        role,
+        text,
+        messageId,
+        avatar: role === 'agent' ? config.avatar : undefined,
+        brandColor: config.brandColor,
+        onFeedback:
+          role === 'agent' && config.collectFeedback
+            ? (fb) => safeInvoke(callbacks.onFeedbackSubmit, callbacks, fb)
+            : undefined,
+      });
+    },
+
+    beginAgentMessage({ messageId }) {
+      const config = getConfig();
+      const message = messageWrapper.appendMessage({
+        role: 'agent',
+        text: '',
+        messageId,
+        avatar: config.avatar,
+        brandColor: config.brandColor,
+        onFeedback: config.collectFeedback
+          ? (fb) => safeInvoke(callbacks.onFeedbackSubmit, callbacks, fb)
+          : undefined,
+      });
+      return {
+        update: (text) => message.setText(text),
+        finish: () => {},
+      };
+    },
+
+    appendError() {
+      const config = getConfig();
+      messageWrapper.appendMessage({
+        role: 'agent',
+        text: 'Something went wrong. Please try again.',
+        error: true,
+        avatar: config.avatar,
+        brandColor: config.brandColor,
+      });
+    },
+
+    showTyping() {
+      messageWrapper.showTyping({ avatar: getConfig().avatar });
+    },
+
+    hideTyping() {
+      messageWrapper.hideTyping();
+    },
+
+    setSuggestions(list) {
+      suggestionWrapper.setSuggestions(list, handleSuggestionClick);
+    },
+
+    setSubmitDisabled(disabled) {
+      suggestionWrapper.setDisabled(disabled);
+    },
+
+    applyConfig(config) {
+      thead.setName(config.name);
+      thead.setAvatar(config.avatar);
+      composer.setPlaceholder(config.placeholder);
+      launcher.setAvatar(config.avatar);
+
+      if (config.signature && !signature) {
+        signature = new Signature({ doc });
+        wrapper.content.appendChild(signature.element);
+      } else if (!config.signature && signature) {
+        signature.destroy();
+        signature = null;
       }
-    });
 
-    signal.create_effect(() => {
-      this.conversation_state().forEach(
-        ({ avatar, message, position, typing }) => {
-          if (typing) {
-            this.typing_component = typing_component({
-              position: 'left',
-              avatar: this.brand_logo,
-            });
-            this.message_wrapper_component
-              .querySelector('.message-wrapper-container')
-              .appendChild(this.typing_component);
-
-            return;
-          } else {
-            if (this.typing_component) {
-              this.typing_component.remove();
-            }
-
-            this.message_component = message_component({
-              avatar,
-              message,
-              position,
-              typing,
-              color: this.brand_color,
-            });
-            this.message_wrapper_component
-              .querySelector('.message-wrapper-container')
-              .appendChild(this.message_component);
-          }
-        }
-      );
-    });
-  }
-
-  init_node() {
-    this.wrapper_iframe_node = document.getElementById(
-      'suppsalism-messages-iframe-container'
-    );
-
-    this.launcher_component = null;
-    this.thead_component = null;
-    this.message_wrapper_component = null;
-    this.message_component = null;
-    this.typing_component = null;
-    this.suggestion_wrapper_component = null;
-    this.composer_component = null;
-    this.signature_component = null;
-  }
-
-  init_attribute() {
-    Object.assign(this, {
-      session_id: this.attributes.session_id,
-      chatbot_key: this.attributes.chatbot_key,
-      display_name: this.attributes.display_name,
-      initial_messages: this.attributes.initial_messages,
-      suggested_message: this.attributes.suggested_message,
-      message_placeholder: this.attributes.message_placeholder,
-      text_footer: this.attributes.text_footer, // NOT USED YET
-      brand_color: this.attributes.brand_color,
-      brand_name: this.attributes.brand_name,
-      brand_logo: this.attributes.brand_logo,
-      launcher_logo: this.attributes.launcher_logo,
-      theme: this.attributes.theme,
-      orientation: this.attributes.orientation,
-      signature_visible: this.attributes.signature_visible,
-      collect_user_feedback: this.attributes.collect_user_feedback, // NOT USED YET
-      regenerate_message: this.attributes.regenerate_message, // NOT USED YET
-    });
-  }
-
-  init_state() {
-    [this.message_state, this.set_message_state] = signal.create_signal('');
-    [this.disabled_submit_state, this.set_disabled_submit_state] =
-      signal.create_signal(false);
-    [this.chat_visible, this.set_chat_visible] = signal.create_signal(false);
-    [this.conversation_state, this.set_conversation_state] =
-      signal.create_signal(
-        this.initial_messages.map((message, index) => ({
-          avatar:
-            this.initial_messages.length - 1 === index
-              ? this.brand_logo
-              : undefined,
-          message: message,
-          position: 'left',
-        }))
-      );
-  }
-
-  init_component() {
-    const wrapper_node = wrapper_component({});
-    const wrapper_slot = wrapper_node.querySelector('.content');
-
-    // inject launcher layout
-    this.launcher_component = launcher_component({
-      avatar: this.launcher_logo,
-      color: this.brand_color,
-      position: this.orientation,
-      on_toggle: () => {
-        this.set_chat_visible(!this.chat_visible());
-      },
-    });
-    document.body.appendChild(this.launcher_component);
-
-    // inject thead layout
-    this.thead_component = thead_component({
-      avatar: this.brand_logo,
-      name: this.brand_name,
-      on_close: () => {
-        this.set_chat_visible(false);
-      },
-    });
-    wrapper_slot.appendChild(this.thead_component);
-
-    // inject message layout
-    this.message_wrapper_component = message_wrapper_component({});
-    wrapper_slot.appendChild(this.message_wrapper_component);
-
-    // inject suggestion layout
-    this.suggestion_wrapper_component = suggestion_wrapper_component({});
-    this.suggested_message.forEach((message) => {
-      this.suggestion_wrapper_component
-        .querySelector('.suggestion-wrapper-content')
-        .appendChild(
-          suggestion_component({
-            text: message,
-            on_click: () => {
-              this.send_message(message);
-            },
-          })
-        );
-    });
-    wrapper_slot.appendChild(this.suggestion_wrapper_component);
-
-    // inject composer layout
-    this.composer_component = composer_component({
-      placeholder: this.message_placeholder,
-      message: this.message_state,
-      disabled_submit: this.disabled_submit_state,
-      on_send: (value) => {
-        this.send_message(value);
-      },
-      on_type: (value) => {
-        this.type_message(value);
-      },
-    });
-    wrapper_slot.appendChild(this.composer_component);
-
-    // inject signature layout
-    if (this.signature_visible) {
-      this.signature_component = signature_component();
-      wrapper_slot.appendChild(this.signature_component);
-    }
-
-    this.node.appendChild(wrapper_node);
-  }
-
-  type_message(message) {
-    this.set_message_state(message.trim());
-  }
-
-  send_message(message) {
-    if (this.disabled_submit_state()) return;
-
-    this.add_message({ message: message, is_response: false });
-    this.set_disabled_submit_state(true);
-
-    return fetch(`${API_URL}/qa`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session: this.session_id,
-        key: this.chatbot_key,
-        query: message,
-      }),
-    })
-      .then(async (response) => {
-        const { answer } = await response.json();
-        this.add_message({ message: answer, is_response: true });
-      })
-      .catch((err) => {
-        throw new Error(`Failed to send message: ${err.message}`);
-      })
-      .finally(() => {
-        this.set_disabled_submit_state(false);
-      });
-  }
-
-  add_message({ message, is_response = false }) {
-    if (!is_response) {
-      this.set_conversation_state([
-        { message: message, position: 'right', typing: false },
-        { avatar: this.brand_logo, typing: true, position: 'left' },
-      ]);
-    } else {
-      this.set_conversation_state([
-        {
-          avatar: this.brand_logo,
-          message: message,
-          position: 'left',
-          typing: false,
-        },
-      ]);
-    }
-  }
-}
-class DOMInitializer {
-  constructor() {
-    this.init_node();
-    this.init_attribute();
-
-    this.create_meta_viewport();
-    this.create_meta_charset();
-    this.create_link_css();
-    this.create_style_tag();
-  }
-
-  init_node() {
-    this.head = document.head;
-    this.body = document.body;
-    this.chat = document.getElementsByTagName('ss-chat')[0];
-    if (!this.chat) throw new Error('Chat element not found!');
-
-    this.meta_viewport = null;
-    this.meta_charset = null;
-    this.link_css = null;
-    this.style_tag = null;
-    this.container = null;
-    this.iframe = null;
-  }
-
-  init_attribute() {
-    [this.attribute_state, this.set_attribute_state] = signal.create_signal({
-      session_id: this.chat.dataset.session || generate_uuid(),
-      chatbot_key: this.chat.dataset.key,
-    });
-  }
-
-  create_meta_viewport() {
-    this.meta_viewport = document.createElement('meta');
-    this.meta_viewport.name = 'viewport';
-    this.meta_viewport.content =
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0';
-  }
-
-  create_meta_charset() {
-    this.meta_charset = document.createElement('meta');
-    this.meta_charset.charset = 'utf-8';
-  }
-
-  create_link_css() {
-    this.link_css = document.createElement('style');
-    this.link_css.textContent = css;
-  }
-
-  create_style_tag() {
-    this.style_tag = document.createElement('style');
-    this.style_tag.textContent = `
-.launcher {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: none;
-  height: 64px;
-  width: 64px;
-  background-color: var(--color);
-  cursor: pointer;
-  position: fixed;
-  bottom: 42px;
-}
-
-.launcher.right {
-  right: 25px;
-}
-
-.launcher.left {
-  left: 25px;
-}
-
-.launcher img {
-  max-width: 40px;
-  max-height: 40px;
-  width: 100%;
-  height: 100%;
-}
-
-#suppsalism-messages-iframe-container {
-  display: initial;
-  z-index: 2147483647;
-  position: fixed;
-  bottom: -1000px;
-  opacity: 0;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px 0 #c1c1c1;
-  overflow: hidden;
-}
-
-#suppsalism-messages-iframe-container.visible {
-  bottom: 117px;
-  min-height: 96px;
-  min-width: 100px;
-  width: 445px;
-  height: 664px;
-  opacity: 1;
-  animation: fadeInOpacity 0.15s ease-in 1;
-}
-
-@keyframes fadeInOpacity {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@media only screen and (max-width: 768px) {
-  #suppsalism-messages-iframe-container.visible {
-    height: 100%;
-    width: 100%;
-    right: 0 !important;
-    left: 0 !important;
-    top: 0;
-  }
-}
-
-#suppsalism-messages-iframe-container.right {
-  right: 25px;
-}
-
-#suppsalism-messages-iframe-container.left {
-  left: 25px;
-}
-
-#suppsalism-iframe {
-  display: initial !important;
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
-  position: absolute !important;
-  bottom: 0 !important;
-  right: 0 !important;
-  background: transparent !important;
-}
-    `;
-  }
-
-  setup_container() {
-    this.container = document.createElement('div');
-    this.container.setAttribute('role', 'region');
-    this.container.setAttribute('aria-label', 'Chat Widget');
-    this.container.id = 'suppsalism-messages-iframe-container';
-    this.container.className = `${this.attribute_state().orientation}`;
-
-    this.head.appendChild(this.style_tag);
-    this.body.appendChild(this.container);
-  }
-
-  setup_iframe() {
-    this.iframe = document.createElement('iframe');
-    this.iframe.id = 'suppsalism-iframe';
-    this.iframe.allowTransparency = 'true';
-    this.iframe.style.border = '0';
-
-    this.container.appendChild(this.iframe);
-
-    setTimeout(() => {
-      this.iframe.contentWindow.document.head.appendChild(this.meta_charset);
-      this.iframe.contentWindow.document.head.appendChild(this.meta_viewport);
-      this.iframe.contentWindow.document.head.appendChild(this.link_css);
-      this.iframe.contentWindow.document.body.setAttribute(
-        'class',
-        `theme-${this.attribute_state().theme}`
-      );
-    }, 0);
-  }
-
-  setup_config() {
-    return fetch(`${API_URL}/chatbot/${this.attribute_state().chatbot_key}`)
-      .then((response) => response.json())
-      .catch((error) => {
-        throw new Error(`Failed to fetch chatbot: ${error.message}`);
-      });
-  }
-
-  build_chatbot() {
-    setTimeout(() => {
-      new ChatApp(
-        this.iframe.contentWindow.document.body,
-        this.attribute_state()
-      );
-    }, 0);
-  }
-
-  execute() {
-    return this.setup_config()
-      .then((attributes) => {
-        this.set_attribute_state({
-          ...this.attribute_state(),
-          ...attributes,
+      if (config.collectLeads && !leadForm) {
+        leadForm = new LeadForm({
+          doc,
+          onSubmit: (fields) => safeInvoke(callbacks.onLeadSubmit, callbacks, fields),
         });
-      })
-      .then(() => {
-        this.setup_container();
-      })
-      .then(() => {
-        this.setup_iframe();
-      })
-      .then(() => {
-        this.build_chatbot();
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }
+        wrapper.content.appendChild(leadForm.element);
+      } else if (!config.collectLeads && leadForm) {
+        leadForm.destroy();
+        leadForm = null;
+      }
+    },
+
+    destroy() {
+      launcher.destroy();
+      leadForm?.destroy();
+      signature?.destroy();
+      composer.destroy();
+      suggestionWrapper.destroy();
+      messageWrapper.destroy();
+      thead.destroy();
+      wrapper.destroy();
+    },
+  };
+
+  return view;
 }
 
-const initializer = new DOMInitializer();
-initializer.execute();
+/**
+ * @typedef {Object} CreateChatbotOptions
+ *
+ * -- options (spec §5.1) --
+ * @property {Element} [mount=document.body] Must be an attached Element (throws synchronously
+ *   otherwise). Decides ownership, not layout — everything created is a descendant of it, and
+ *   destroy() tears it down.
+ * @property {string} [instanceId] Internal instance id; auto-generated when omitted.
+ *
+ * -- configuration (spec §4.4) — every field is optional, invalid values fall back to their
+ *    default with a console warning rather than throwing --
+ * @property {'light'|'dark'} [theme='light'] Sets body.theme-{theme} inside the iframe.
+ * @property {'left'|'right'} [orientation='right'] Launcher and panel side.
+ * @property {string} [brandColor='#2563eb'] Accent color (hex); text contrast derived automatically.
+ * @property {string} [name='Assistant'] Header title.
+ * @property {string} [avatar] Header and agent-bubble avatar URL.
+ * @property {string} [placeholder='Type a message…'] Composer placeholder.
+ * @property {string[]} [initialMessages=[]] Rendered before any interaction.
+ * @property {string[]} [suggestedMessages=[]] Suggestion chips.
+ * @property {boolean} [signature=true] Show the footer credit.
+ * @property {boolean} [autoOpen=false] Open the panel on mount.
+ * @property {boolean} [collectFeedback=false] Show thumbs up/down on agent messages.
+ * @property {boolean} [collectLeads=false] Show the lead form (first name, last name, email, message).
+ * @property {string} [sessionId] Stamped on every lifecycle payload; a UUID is generated when omitted.
+ *
+ * -- message lifecycle (spec §6) --
+ * @property {(draft: {text: string, messageId: string, sessionId: string, timestamp: number}) =>
+ *   (object|false|Promise<object|false>)} [beforeSubmitMessage] Transform or cancel (return false)
+ *   before the user bubble renders.
+ * @property {(message: {text: string, messageId: string, sessionId: string, timestamp: number},
+ *   ctx: {history: object[], config: object}) =>
+ *   (string|{text: string, suggestions?: string[]}|AsyncIterable<string|{text: string}>|Promise<any>)}
+ *   [onSendMessage] REQUIRED — throws synchronously at construction if omitted. Produces the reply;
+ *   core never retries.
+ * @property {(message: object, reply: {text: string, suggestions?: string[]}) => (void|Promise<void>)}
+ *   [afterSubmitMessage] Fire-and-forget; a throw is caught and routed to onMessageError.
+ *
+ * -- other lifecycle (spec §6.6) — all optional, all fire-and-forget, all wrapped so a throw
+ *    cannot break the UI --
+ * @property {(bot: ChatbotInstance) => void} [onReady] Widget mounted and interactive.
+ * @property {() => void} [onOpen] Panel opened.
+ * @property {() => void} [onClose] Panel closed.
+ * @property {(text: string) => (boolean|void)} [onSuggestionClick] Return false to prevent auto-submit.
+ * @property {(feedback: {messageId: string, value: 'up'|'down'}) => void} [onFeedbackSubmit] Only
+ *   fires when collectFeedback is on.
+ * @property {(fields: {firstName: string, lastName: string, email: string, message: string}) => void}
+ *   [onLeadSubmit] Only fires when collectLeads is on.
+ * @property {(error: Error, message: object) => void} [onMessageError] Called after any lifecycle
+ *   error has already been degraded visibly (error bubble rendered, composer unlocked, etc).
+ */
+
+/**
+ * @typedef {Object} ChatbotInstance
+ * @property {string} id
+ * @property {() => void} open
+ * @property {() => void} close
+ * @property {() => void} toggle
+ * @property {(text: string) => Promise<void>} submit Programmatic message; runs the full lifecycle.
+ * @property {(patch: Partial<CreateChatbotOptions>) => void} updateConfig Re-validates, merges, re-applies DOM effects.
+ * @property {() => {open: boolean, messages: object[], pending: boolean}} getState
+ * @property {() => void} destroy Removes DOM, unbinds listeners, disposes effects.
+ */
+
+/**
+ * Wires config → state → mount → components → instance API (guide §2.1).
+ * Every piece it touches is already trusted; this file creates no DOM of its
+ * own beyond delegating to lib/mount and lib/component.
+ *
+ * @param {CreateChatbotOptions} [options]
+ * @returns {ChatbotInstance}
+ */
+export function createChatbot(options = {}) {
+  const { mount = document.body, instanceId = generateUuid(), ...rest } = options;
+
+  if (!isAttachedElement(mount)) {
+    throw new Error('[ss-chat] mount must be an attached Element');
+  }
+
+  const { config, callbacks } = splitOptions(rest);
+
+  if (typeof callbacks.onSendMessage !== 'function') {
+    throw new Error('[ss-chat] onSendMessage is required');
+  }
+
+  let resolvedConfig = resolveConfig([config]);
+  const getConfig = () => resolvedConfig;
+
+  return createRoot((dispose) => {
+    const state = initState(resolvedConfig);
+    const shell = mountShell({ mount, instanceId, config: resolvedConfig });
+    const iframe = mountIframe({ shell, instanceId, config: resolvedConfig });
+
+    function openChat() {
+      if (state.chatVisible()) return;
+      state.setChatVisible(true);
+      safeInvoke(callbacks.onOpen, callbacks);
+    }
+
+    function closeChat() {
+      if (!state.chatVisible()) return;
+      state.setChatVisible(false);
+      safeInvoke(callbacks.onClose, callbacks);
+    }
+
+    function toggleChat() {
+      if (state.chatVisible()) closeChat();
+      else openChat();
+    }
+
+    const view = buildComponents({
+      doc: iframe.doc,
+      shell,
+      getConfig,
+      state,
+      callbacks,
+      closeChat,
+      toggleChat,
+    });
+
+    state.conversation().forEach((entry) => {
+      view.appendMessage({ role: entry.role, text: entry.text, messageId: entry.messageId });
+    });
+
+    bindEffects({ state, shell, view });
+
+    const bot = {
+      id: instanceId,
+      open: openChat,
+      close: closeChat,
+      toggle: toggleChat,
+
+      submit(text) {
+        return submitMessage({ text, config: resolvedConfig, view, state, callbacks });
+      },
+
+      updateConfig(patch) {
+        resolvedConfig = resolveConfig([resolvedConfig, patch]);
+        shell.applyConfig(resolvedConfig);
+        iframe.applyConfig(resolvedConfig);
+        view.applyConfig(resolvedConfig);
+      },
+
+      getState() {
+        return {
+          open: state.chatVisible(),
+          messages: state.conversation(),
+          pending: state.disabledSubmit(),
+        };
+      },
+
+      destroy() {
+        view.destroy();
+        iframe.destroy();
+        shell.destroy();
+        dispose();
+      },
+    };
+
+    safeInvoke(callbacks.onReady, callbacks, bot);
+
+    return bot;
+  });
+}

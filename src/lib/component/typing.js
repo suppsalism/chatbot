@@ -1,43 +1,56 @@
-export default function typing_component({ position, avatar }) {
-  const typing = document.createElement('span');
-  typing.className = 'typing';
+import { CLASS } from '../constants/dom';
 
-  for (let i = 1; i <= 3; i++) {
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    typing.appendChild(dot);
+export class Typing {
+  constructor({ doc, avatar }) {
+    this.doc = doc;
+    this.avatar = avatar;
+
+    this.build();
   }
 
-  const wrapper = document.createElement('div');
-  wrapper.className = `message-wrapper ${position}`;
+  build() {
+    const wrapper = this.doc.createElement('div');
+    wrapper.className = `${CLASS.messageWrapper} ${CLASS.messageLeft}`;
 
-  const container = document.createElement('div');
-  container.className = 'message-container';
-  wrapper.appendChild(container);
+    const container = this.doc.createElement('div');
+    container.className = CLASS.messageContainer;
+    wrapper.appendChild(container);
 
-  const group_message = document.createElement('div');
-  group_message.className = 'group-message';
+    const group = this.doc.createElement('div');
+    group.className = CLASS.messageGroup;
+    container.appendChild(group);
 
-  if (avatar) {
-    const div = document.createElement('div');
-    div.className = 'avatar-wrapper';
+    if (this.avatar) {
+      const avatarWrapper = this.doc.createElement('div');
+      avatarWrapper.className = CLASS.messageAvatarWrapper;
 
-    const img = document.createElement('img');
-    img.className = 'avatar';
-    img.src = avatar;
-    img.alt = 'Brand logo';
-    div.appendChild(img);
+      const img = this.doc.createElement('img');
+      img.className = CLASS.messageAvatar;
+      img.src = this.avatar;
+      img.alt = 'Brand logo';
+      avatarWrapper.appendChild(img);
 
-    group_message.appendChild(div);
+      group.appendChild(avatarWrapper);
+    }
+
+    const bubble = this.doc.createElement('span');
+    bubble.className = `${CLASS.message} ${CLASS.messageLeft}`;
+    group.appendChild(bubble);
+
+    const typing = this.doc.createElement('span');
+    typing.className = CLASS.typing;
+    bubble.appendChild(typing);
+
+    for (let i = 0; i < 3; i += 1) {
+      const dot = this.doc.createElement('span');
+      dot.className = CLASS.typingDot;
+      typing.appendChild(dot);
+    }
+
+    this.element = wrapper;
   }
 
-  const message_span = document.createElement('span');
-  message_span.className = `message ${position}`;
-  group_message.appendChild(message_span);
-
-  message_span.appendChild(typing);
-
-  container.appendChild(group_message);
-
-  return wrapper;
+  destroy() {
+    this.element.remove();
+  }
 }

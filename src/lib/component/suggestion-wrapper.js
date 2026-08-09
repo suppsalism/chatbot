@@ -1,15 +1,56 @@
-export default function suggestion_wrapper_component({}) {
-  const wrapper = document.createElement('div');
-  const container = document.createElement('div');
-  const content = document.createElement('div');
+import { Suggestion } from './suggestion';
+import { CLASS } from '../constants/dom';
 
-  wrapper.className = 'suggestion-wrapper-wrapper';
-  wrapper.appendChild(container);
+export class SuggestionWrapper {
+  constructor({ doc }) {
+    this.doc = doc;
+    this.listeners = [];
+    this.children = [];
 
-  container.className = 'suggestion-wrapper-container';
-  container.appendChild(content);
+    this.build();
+  }
 
-  content.className = 'suggestion-wrapper-content';
+  on(node, event, handler) {
+    node.addEventListener(event, handler);
+    this.listeners.push([node, event, handler]);
+  }
 
-  return wrapper;
+  build() {
+    const wrapper = this.doc.createElement('div');
+    wrapper.className = CLASS.suggestionWrapperWrapper;
+
+    const container = this.doc.createElement('div');
+    container.className = CLASS.suggestionWrapperContainer;
+    wrapper.appendChild(container);
+
+    const content = this.doc.createElement('div');
+    content.className = CLASS.suggestionWrapperContent;
+    container.appendChild(content);
+
+    this.element = wrapper;
+    this.content = content;
+  }
+
+  addSuggestion({ text, onClick }) {
+    const suggestion = new Suggestion({ doc: this.doc, text, onClick });
+    this.children.push(suggestion);
+    this.content.appendChild(suggestion.element);
+  }
+
+  /** Replaces the whole chip row — used when a reply carries new suggestions (spec §6.2). */
+  setSuggestions(list, onClick) {
+    this.children.forEach((child) => child.destroy());
+    this.children = [];
+    list.forEach((text) => this.addSuggestion({ text, onClick }));
+  }
+
+  setDisabled(disabled) {
+    this.children.forEach((child) => child.setDisabled(disabled));
+  }
+
+  destroy() {
+    this.children.forEach((child) => child.destroy());
+    this.listeners.forEach(([node, event, handler]) => node.removeEventListener(event, handler));
+    this.element.remove();
+  }
 }
