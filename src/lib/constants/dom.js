@@ -5,6 +5,9 @@
 
 export const CHAT_TAG_NAME = 'ss-chat';
 
+/** Dispatched from a <ss-chat> element once its bot instance is created (or re-created). */
+export const CHAT_READY_EVENT = 'ss-chat:ready';
+
 export const CLASS = {
   // shell (host page)
   shellContainer: 'ss-shell',
