@@ -524,7 +524,6 @@ body.ss-theme-dark
 
 .ss-composer-wrapper .ss-composer-container .ss-composer-editor .ss-composer-expanded {
   border-radius: 16px;
-  overflow: hidden;
 }
 
 .ss-composer-wrapper .ss-composer-container .ss-composer-editor .ss-composer-expanded .ss-composer-content {
