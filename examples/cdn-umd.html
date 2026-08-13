@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — CDN / UMD</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CDN / UMD</h1>
+    <p>
+      The bundle attaches <code>window.SsChat</code>. Because the script is deferred, the inline
+      config below runs <em>first</em> — so it uses the
+      <code>window.ssChat.push([...])</code> queue, which is safe to call before the bundle arrives.
+    </p>
+    <p>This page has no backend: <code>onSendMessage</code> just echoes after a short delay.</p>
+    <button id="help">Need help?</button>
+
+    <script>
+      window.ssChat = window.ssChat || [];
+      window.ssChat.push([
+        'createChatbot',
+        {
+          name: 'Assistant',
+          theme: 'light',
+          brandColor: '#2563eb',
+          autoOpen: true,
+          initialMessages: ['Hi! Ask me anything — I only echo, but the UI is real.'],
+          suggestedMessages: ['What is this?', 'How do I install it?'],
+          collectFeedback: true,
+          onSendMessage: async (message) => {
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            return `You said: "${message.text}"`;
+          },
+          onFeedbackSubmit: (feedback) => console.log('feedback', feedback),
+        },
+      ]);
+    </script>
+
+    <!-- Built locally by `npm run build`. In production, point at the CDN and pin a major:
+         https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@1/dist/chatbot.umd.js -->
+    <script src="../dist/chatbot.umd.js" defer></script>
+
+    <script defer>
+      document.querySelector('#help').addEventListener('click', () => {
+        window.SsChat.instances[0].toggle();
+      });
+    </script>
+  </body>
+</html>

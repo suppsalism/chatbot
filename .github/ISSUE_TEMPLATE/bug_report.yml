@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in the widget does not behave as documented
+labels: [bug]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: the panel renders inside an iframe, so host-page CSS cannot reach into it —
+        that one is expected. See the FAQ in the README.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: 'From npm, or `SsChat.version` in the console for CDN users.'
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: entry
+    attributes:
+      label: How are you loading it?
+      options:
+        - npm — createChatbot()
+        - npm — defineChatElement() / <ss-chat>
+        - CDN (UMD) — createChatbot()
+        - CDN (UMD) — defineChatElement() / <ss-chat>
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The config object or the `data-*` attributes used, and the smallest snippet that shows it.
+        Please redact anything from inside your own `onSendMessage`.
+      render: js
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: Anything prefixed `[ss-chat]` is especially useful.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 130 / macOS 15

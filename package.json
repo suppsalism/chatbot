@@ -1,43 +1,83 @@
 {
-  "name": "@suppsalism/chatbot",
-  "version": "1.0.0",
+  "name": "@suppsalismjs/chatbot",
+  "version": "0.1.0",
   "description": "A pure UI and state package for a chat widget — zero runtime dependencies, no network calls. Bring your own onSendMessage.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/chatbot.cjs",
   "module": "./dist/chatbot.module.js",
   "unpkg": "./dist/chatbot.umd.js",
+  "jsdelivr": "./dist/chatbot.umd.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "require": "./dist/chatbot.cjs",
+      "import": "./dist/chatbot.modern.js",
       "default": "./dist/chatbot.modern.js"
     },
-    "./style.css": "./src/widget.css"
+    "./style.css": "./dist/chatbot.css",
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist",
-    "src/widget.css"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suppsalism/chatbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/suppsalism/chatbot/issues"
+  },
+  "homepage": "https://github.com/suppsalism/chatbot#readme",
   "scripts": {
     "build:lib": "microbundle -i src/index.js --format cjs,es,modern --css inline",
     "build:umd": "microbundle -i src/umd.js --format umd --name SsChat --css inline",
-    "build": "npm run build:lib && npm run build:umd",
+    "build:css": "node scripts/build-css.mjs",
+    "build": "npm run build:lib && npm run build:umd && npm run build:css",
     "dev": "microbundle watch -i src/index.js --format cjs,es,modern --css inline",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublish": "npm run build"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:exports": "node scripts/check-exports.mjs",
+    "check:size": "node scripts/check-size.mjs",
+    "examples": "node scripts/serve-examples.mjs",
+    "verify": "npm run lint && npm run format:check && npm test && npm run build && npm run check:exports && npm run check:size",
+    "prepublishOnly": "npm run verify"
   },
   "keywords": [
     "chatbot",
     "chat-widget",
-    "ui"
+    "chat",
+    "widget",
+    "ui",
+    "custom-element",
+    "web-component",
+    "zero-dependencies",
+    "vanilla-js"
   ],
-  "author": "",
+  "author": "Ilyass Mabrouk",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.12.0",
     "jsdom": "^29.1.1",
     "microbundle": "^0.15.1",
+    "prettier": "^3.3.3",
     "vitest": "^4.1.10"
   }
 }

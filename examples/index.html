@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — examples</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      li {
+        margin-bottom: 0.75rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>@suppsalismjs/chatbot examples</h1>
+    <p>
+      Built from <code>../dist/</code> — run <code>npm run build</code> if a page comes up blank.
+    </p>
+    <ul>
+      <li>
+        <a href="./cdn-umd.html">CDN / UMD</a> — the <code>&lt;script src&gt;</code> +
+        <code>window.ssChat.push([...])</code> queue
+      </li>
+      <li>
+        <a href="./custom-element.html">&lt;ss-chat&gt; custom element</a> — DOM-driven config, live
+        attribute edits, auto-destroy
+      </li>
+      <li>
+        <a href="./esm-streaming.html">ESM + streaming</a> — <code>createChatbot()</code> with an
+        async-generator reply
+      </li>
+    </ul>
+  </body>
+</html>

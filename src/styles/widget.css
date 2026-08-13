@@ -1,0 +1,706 @@
+/* Iframe only — everything the components render (guide §2.3). */
+
+/* START: global */
+:root {
+  --gray-100: #eee;
+  --gray-200: #e7e7e7;
+  --gray-300: #c1c1c1;
+  --gray-400: #949697;
+  --gray-500: #717070;
+  --gray-600: #5a5e63;
+
+  --blue-100: rgba(124, 172, 248, 0.05);
+
+  --white-100: #fff;
+  --white-200: #fafafa;
+}
+
+body {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Helvetica Neue,
+    Arial,
+    Noto Sans,
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    Segoe UI Symbol,
+    'Noto Color Emoji';
+  line-height: 1.5715;
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}
+/* END: global */
+
+/* START: wrapper component */
+body.ss-theme-light .ss-wrapper {
+  background-color: #fafafa;
+}
+
+body.ss-theme-dark .ss-wrapper {
+  background:
+    radial-gradient(circle at 50% 50%, rgb(33, 36, 40) 20%, transparent 80%),
+    conic-gradient(
+      from 45deg at 50% 50%,
+      rgb(16, 18, 20) 0%,
+      rgb(33, 36, 40) 25%,
+      rgb(16, 18, 20) 50%,
+      rgb(33, 36, 40) 75%,
+      rgb(16, 18, 20) 100%
+    );
+}
+
+.ss-wrapper {
+  height: 100%;
+}
+
+.ss-wrapper .ss-wrapper-container,
+.ss-wrapper .ss-wrapper-content {
+  height: inherit;
+}
+
+.ss-wrapper .ss-wrapper-container .ss-wrapper-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+}
+/* END: wrapper component */
+
+/* START: typing component */
+body.ss-theme-light .ss-typing {
+  background-color: #f0f0f0;
+}
+
+body.ss-theme-dark .ss-typing {
+  background-color: #232527;
+}
+
+.ss-typing {
+  border-radius: 99px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.ss-typing .ss-typing-dot {
+  float: left;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  background-color: #aaa;
+  border-radius: 50%;
+  opacity: 0;
+  animation: ss-loading-fade 1s infinite;
+}
+
+.ss-typing .ss-typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.ss-typing .ss-typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ss-typing .ss-typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ss-loading-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+/* END: typing component */
+
+/* START: thead component */
+body.ss-theme-light .ss-thead-wrapper {
+  border-bottom: 1px solid #eee;
+  background-color: #fff;
+}
+
+body.ss-theme-light .ss-thead-wrapper .ss-thead-content .ss-thead-left {
+  color: #1c1c1c;
+}
+
+body.ss-theme-light .ss-thead-wrapper .ss-thead-content .ss-thead-right svg {
+  color: #1c1c1c;
+}
+
+body.ss-theme-dark .ss-thead-wrapper {
+  border-bottom: 1px solid rgba(258, 258, 258, 0.2);
+  background:
+    radial-gradient(circle at 50% 50%, rgb(33, 36, 40) 20%, transparent 80%),
+    conic-gradient(
+      from 45deg at 50% 50%,
+      rgb(16, 18, 20) 0%,
+      rgb(33, 36, 40) 25%,
+      rgb(16, 18, 20) 50%,
+      rgb(33, 36, 40) 75%,
+      rgb(16, 18, 20) 100%
+    );
+}
+
+body.ss-theme-dark .ss-thead-wrapper .ss-thead-content .ss-thead-left {
+  color: #c1c1c1;
+}
+
+body.ss-theme-dark .ss-thead-wrapper .ss-thead-content .ss-thead-right svg {
+  color: #c1c1c1;
+}
+
+.ss-thead-wrapper .ss-thead-container {
+  padding: 16px;
+}
+
+.ss-thead-wrapper .ss-thead-container .ss-thead-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ss-thead-wrapper .ss-thead-container .ss-thead-content .ss-thead-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.ss-thead-wrapper .ss-thead-container .ss-thead-content .ss-thead-avatar {
+  width: 40px;
+  height: 40px;
+  height: auto;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.ss-thead-wrapper .ss-thead-container .ss-thead-content .ss-thead-close {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.ss-thead-wrapper .ss-thead-container .ss-thead-content .ss-thead-name {
+  font-weight: 600;
+}
+/* END: thead component */
+
+/* START: signature component */
+body.ss-theme-light .ss-signature-wrapper {
+  background-color: #fafafa;
+}
+
+body.ss-theme-dark .ss-signature-wrapper {
+  background-color: rgba(34, 37, 41, 1);
+}
+
+.ss-signature-wrapper {
+  text-align: center;
+  padding-bottom: 6px;
+}
+
+.ss-signature-wrapper .ss-signature {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #949697;
+  text-decoration: none;
+}
+/* END: signature component */
+
+/* START: message wrapper component */
+body.ss-theme-light .ss-message-wrapper-wrapper::-webkit-scrollbar {
+  background-color: #fff;
+}
+
+body.ss-theme-light .ss-message-wrapper-wrapper::-webkit-scrollbar-thumb {
+  background-color: #e7e7e7;
+}
+
+body.ss-theme-dark .ss-message-wrapper-wrapper::-webkit-scrollbar {
+  background-color: unset;
+}
+
+body.ss-theme-dark .ss-message-wrapper-wrapper::-webkit-scrollbar-thumb {
+  background-color: #949697;
+}
+
+.ss-message-wrapper-wrapper {
+  overflow: auto;
+  overflow-anchor: unset;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.ss-message-wrapper-wrapper .ss-message-wrapper-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: auto;
+  flex-grow: 1;
+  position: relative;
+  gap: 16px;
+  padding: 20px 16px;
+}
+
+.ss-message-wrapper-wrapper::-webkit-scrollbar {
+  width: 6px;
+  background: #fafafa;
+}
+
+.ss-message-wrapper-wrapper::-webkit-scrollbar-thumb {
+  border-radius: 20px;
+  background-color: #e7e7e7;
+}
+/* END: message wrapper component */
+
+/* START: message component */
+body.ss-theme-light .ss-message-wrapper .ss-message-container .ss-message {
+  box-shadow: 0 2px 6px 0 rgba(201, 201, 201, 0.5);
+}
+
+body.ss-theme-light .ss-message-wrapper .ss-message-container .ss-message.ss-left {
+  background-color: #fff;
+  color: #000;
+}
+
+body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message {
+  box-shadow: unset;
+}
+
+body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message.ss-left {
+  background-color: rgb(50, 53, 56);
+  color: #c1c1c1;
+}
+
+.ss-message-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ss-message-wrapper.ss-right {
+  align-items: flex-end;
+}
+
+.ss-message-wrapper.ss-left {
+  align-items: flex-start;
+}
+
+.ss-message-wrapper .ss-message-container {
+  max-width: 80%;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message-avatar-wrapper {
+  min-width: 30px;
+  max-width: 30px;
+  height: 30px;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message-avatar-wrapper .ss-message-avatar {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message {
+  display: inline-block;
+  white-space: pre-wrap;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message.ss-left {
+  border-bottom-left-radius: 0;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message.ss-right {
+  border-bottom-right-radius: 0;
+  background-color: var(--ss-bg-color);
+  color: var(--ss-txt-color);
+}
+
+.ss-message-wrapper .ss-message-container .ss-message.ss-message-error {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+/* END: message component */
+
+/* START: feedback component */
+.ss-feedback-wrapper {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.ss-feedback-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  color: var(--gray-400);
+}
+
+.ss-feedback-button:hover {
+  color: var(--gray-600);
+}
+
+.ss-feedback-button.ss-feedback-active {
+  color: var(--ss-brand);
+}
+/* END: feedback component */
+
+/* START: composer component */
+body.ss-theme-light .ss-composer-wrapper {
+  background-color: #fafafa;
+}
+
+body.ss-theme-light .ss-composer-wrapper .ss-composer-container {
+  border-top: 1px solid #eee;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded {
+  border: 1px solid #e7e7e7;
+  background-color: #fff;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content
+  .ss-composer-textarea {
+  color: #000;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight
+  svg {
+  color: #000;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight.ss-disabled
+  svg {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight:hover {
+  background: #e7e7e7;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar {
+  background-color: #fff;
+}
+
+body.ss-theme-light
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar-thumb {
+  background-color: #e7e7e7;
+}
+
+body.ss-theme-dark .ss-composer-wrapper {
+  background-color: rgba(34, 37, 41, 1);
+}
+
+body.ss-theme-dark .ss-composer-wrapper .ss-composer-container {
+  border-top: 1px solid rgba(258, 258, 258, 0.2);
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded {
+  background-color: rgba(258, 258, 258, 0.1);
+  border: 1px solid rgba(258, 258, 258, 0.1);
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content
+  .ss-composer-textarea {
+  color: #c1c1c1;
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight
+  svg {
+  color: rgba(209, 210, 211, 1);
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight.ss-disabled
+  svg {
+  color: rgba(209, 210, 211, 0.5);
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-highlight:hover {
+  background: rgba(209, 210, 211, 0.2);
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar {
+  background-color: unset;
+}
+
+body.ss-theme-dark
+  .ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar-thumb {
+  background-color: #949697;
+}
+
+.ss-composer-wrapper.ss-disabled {
+  opacity: 0.85;
+}
+
+.ss-composer-wrapper .ss-composer-container {
+  padding: 16px 16px 16px 16px;
+}
+
+.ss-composer-wrapper .ss-composer-container .ss-composer-editor {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ss-composer-wrapper .ss-composer-container .ss-composer-editor .ss-composer-highlight {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  transition: 0.2s;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ss-composer-wrapper .ss-composer-container .ss-composer-editor .ss-composer-expanded {
+  border-radius: 16px;
+}
+
+.ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content {
+  max-height: 290px;
+  min-height: 40px;
+  overflow: auto;
+}
+
+.ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content
+  .ss-composer-textarea {
+  padding: 8px 16px;
+  white-space: pre-wrap;
+  border: none;
+  background: transparent;
+  outline: 0;
+  height: 100%;
+  font-size: 14px;
+}
+
+.ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content
+  .ss-composer-textarea:focus {
+  outline: 0;
+}
+
+.ss-composer-wrapper .ss-composer-container .ss-composer-editor .ss-composer-action {
+  height: 44px;
+  display: grid;
+  align-items: center;
+}
+
+.ss-composer-wrapper .ss-composer-container [placeholder]:empty::before {
+  content: attr(placeholder);
+  color: #c1c1c1;
+  cursor: text;
+  font-size: 14px;
+}
+
+.ss-composer-wrapper .ss-composer-container [placeholder]:empty:focus::after {
+  content: '';
+}
+
+.ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ss-composer-wrapper
+  .ss-composer-container
+  .ss-composer-editor
+  .ss-composer-expanded
+  .ss-composer-content::-webkit-scrollbar-thumb {
+  border-radius: 20px;
+}
+/* END: composer component */
+
+/* START: suggestion component */
+body.ss-theme-light .ss-suggestion {
+  color: #1c1c1c;
+  background-color: #f4f4f4;
+  border: 1px solid #e2e2e2;
+}
+
+body.ss-theme-light .ss-suggestion:hover {
+  background-color: #e2e2e2;
+}
+
+body.ss-theme-dark .ss-suggestion {
+  color: #c1c1c1;
+  background-color: rgb(50, 53, 56);
+  border: 1px solid rgb(50, 53, 56);
+}
+
+.ss-suggestion {
+  padding: 8px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ss-suggestion.ss-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* END: suggestion component */
+
+/* START: suggestion wrapper component */
+.ss-suggestion-wrapper-wrapper .ss-suggestion-wrapper-container .ss-suggestion-wrapper-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 16px;
+}
+/* END: suggestion wrapper component */
+
+/* START: lead form component */
+body.ss-theme-light .ss-lead-form-wrapper input {
+  background-color: #fff;
+  border: 1px solid #e7e7e7;
+  color: #000;
+}
+
+body.ss-theme-dark .ss-lead-form-wrapper input {
+  background-color: rgba(258, 258, 258, 0.1);
+  border: 1px solid rgba(258, 258, 258, 0.1);
+  color: #c1c1c1;
+}
+
+.ss-lead-form-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.ss-lead-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.ss-lead-form-field input {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: 0;
+}
+
+.ss-lead-form-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ss-lead-form-action button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  background-color: var(--ss-brand);
+  color: #fff;
+  cursor: pointer;
+}
+/* END: lead form component */

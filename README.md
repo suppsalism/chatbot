@@ -1,165 +1,241 @@
-# @suppsalism/chatbot
+# @suppsalismjs/chatbot
 
-A pure UI and state engine for a chat widget. Give it a config and an
-`onSendMessage` function, and it composes the widget, renders it, manages
-every interaction, and hands you a message lifecycle to hook your own
-backend into.
+<a href="https://github.com/suppsalism/chatbot">
+	<img width="300px" src="assets/banner.png" alt="A chat widget UI for any web page" />
+</a>
 
-It has **zero runtime dependencies** and knows nothing about HTTP, URLs,
-databases, authentication, or any specific chat backend. You bring the
-model or API call — this package brings the UI, the state, and the
-plumbing between them.
+[![npm](https://img.shields.io/npm/v/@suppsalismjs/chatbot.svg)](https://www.npmjs.com/package/@suppsalismjs/chatbot)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/@suppsalismjs/chatbot)](https://bundlephobia.com/package/@suppsalismjs/chatbot)
+[![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://www.npmjs.com/package/@suppsalismjs/chatbot?activeTab=dependencies)
+[![license](https://img.shields.io/npm/l/@suppsalismjs/chatbot.svg)](./LICENSE.md)
 
-## Table of contents
-
-- [Why this package](#why-this-package)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [The HTML tag](#the-html-tag)
-- [Configuration](#configuration)
-- [The message lifecycle](#the-message-lifecycle)
-- [Other callbacks](#other-callbacks)
-- [Instance API](#instance-api)
-- [Styling](#styling)
-- [CDN usage](#cdn-usage)
-- [TypeScript](#typescript)
-- [What's deliberately not in this package](#whats-deliberately-not-in-this-package)
-- [Browser support](#browser-support)
-- [Development](#development)
-- [Versioning](#versioning)
-- [License](#license)
-
-## Why this package
-
-Most chat widgets bundle a UI *and* a backend integration together, so
-adopting one means adopting its network layer, its auth model, and its
-opinions about where your data lives. This package draws a hard line
-instead:
-
-> If it survives `JSON.stringify`, it's configuration. If it doesn't
-> (a function, a DOM node), it's an option you pass in.
-
-That means themes, copy, and feature flags are plain serializable config —
-safe to generate from a dashboard or `data-*` attributes — while sending a
-message, persisting it, and authenticating the request are entirely your
-code, supplied as a callback. No API keys, endpoints, or base URLs ever
-appear in this package's config, and it never makes a network call of any
-kind.
-
-## Install
-
-```bash
-npm install @suppsalism/chatbot
-```
-
-```js
-import { createChatbot } from '@suppsalism/chatbot';
-```
-
-Importing has no side effects — it's safe under Node, SSR, and in tests.
-Nothing renders until you call `createChatbot()`.
+A chat widget UI for any web page. You supply one function that returns the
+reply — this package builds the widget, renders it, and runs every interaction.
 
 ## Quick start
 
+### CDN
+
+```html
+<script>
+  window.ssChat = window.ssChat || [];
+  ssChat.push([
+    'defineChatElement',
+    {
+      onSendMessage: async (message) => {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: message.text }),
+        });
+        return (await res.json()).reply;
+      },
+    },
+  ]);
+</script>
+<script
+  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@1/dist/chatbot.umd.js"
+  defer
+></script>
+
+<ss-chat data-name="Assistant" data-theme="dark"></ss-chat>
+```
+
+### npm
+
+```bash
+npm install @suppsalismjs/chatbot
+```
+
 ```js
-import { createChatbot } from '@suppsalism/chatbot';
+import { createChatbot } from '@suppsalismjs/chatbot';
 
 const bot = createChatbot({
   name: 'Assistant',
   initialMessages: ['Hi! How can I help?'],
-  suggestedMessages: ['Pricing', 'Book a demo'],
-
-  // The one function you must supply — core is pure UI, it can't produce
-  // a reply on its own.
-  onSendMessage: async (message, { history, config }) => {
-    const response = await fetch('/api/chat', {
+  onSendMessage: async (message) => {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ text: message.text, history }),
+      body: JSON.stringify({ text: message.text }),
     });
-    const { reply } = await response.json();
-    return reply;
+    return (await res.json()).reply;
   },
 });
 ```
 
-That's it — a launcher and panel are mounted into `document.body`, and
-every submitted message runs through `onSendMessage`. No demo blocked on
-writing a backend first: swap in the bundled `echoReply` while you build
-the real one:
+No backend handy? `echoReply` ships with the package:
 
 ```js
-import { createChatbot, echoReply } from '@suppsalism/chatbot';
+import { createChatbot, echoReply } from '@suppsalismjs/chatbot';
 
 createChatbot({ onSendMessage: echoReply });
 ```
 
-## The HTML tag
+## Why this package
 
-For a no-build, declarative setup, register the `<ss-chat>` custom
-element once and drop the tag anywhere in your markup:
+Most chat widgets bundle a UI _and_ a backend integration, so adopting one means
+adopting its network layer, its auth model, and its opinions about where your
+data lives.
+
+This one ships the UI and the state and nothing else — it makes no network calls
+of any kind, and no API keys, endpoints, or base URLs appear anywhere in its
+config. Sending a message, persisting it, and authenticating the request are
+your code, passed in as a callback, so the same widget works against your own
+API route, a hosted LLM, a local model, or a mock in a test.
+
+## Two ways to use it
+
+`createChatbot()` and `defineChatElement()` are the only two ways to drive the
+widget, and both are exposed identically whether you got the package from npm or
+the CDN — `SsChat.createChatbot` is the same function as the npm import, not a
+reduced variant. Everything after this section applies to both equally.
+
+|                           | `createChatbot()`                                                | `defineChatElement()` + `<ss-chat>`                                                       |
+| ------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| You call                  | `createChatbot(options)` directly, wherever you want it to mount | `defineChatElement(options)` **once**, anywhere — the tag does the rest                   |
+| Configuration             | Passed as a JS object                                            | Per-instance `data-*` attributes on each tag, over shared defaults passed at registration |
+| Mounting                  | You decide when                                                  | Automatic, the instant the tag is connected to the DOM                                    |
+| `destroy()`               | You call it yourself                                             | Automatic, the instant the tag is removed from the DOM                                    |
+| `updateConfig()`          | You call it yourself                                             | Automatic, the instant a `data-*` attribute changes                                       |
+| Getting the instance back | Returned directly from the call                                  | Via `tag.bot` or the `ss-chat:ready` event                                                |
+
+**Choose `defineChatElement`** when the widget's presence should just follow the
+DOM: markup authored by a CMS, a component that mounts and unmounts inside a
+larger tree, an SPA route that renders the tag on some pages and not others.
+
+**Choose `createChatbot`** when you need to control exactly when it mounts, or
+you're already holding the instance where you created it.
+
+### `createChatbot`
+
+The primitive everything else is built on. Call it, get an instance back, drive
+it yourself:
 
 ```js
-import { defineChatElement } from '@suppsalism/chatbot';
+const bot = createChatbot({ onSendMessage });
+```
 
-defineChatElement({
-  onSendMessage: (message) => fetch('/api/chat', { /* ... */ }).then((r) => r.json()),
-});
+Calling it directly means you own its lifecycle: you decide when and where it
+mounts, and you're responsible for `bot.destroy()` when you're done with it and
+`bot.updateConfig()` if its config changes later.
+
+### `defineChatElement` and `<ss-chat>`
+
+Not a different engine — a thin adapter that registers a `<ss-chat>` custom
+element and calls `createChatbot()` for you, driven by the DOM instead of by
+your own function calls:
+
+```js
+import { defineChatElement } from '@suppsalismjs/chatbot';
+
+defineChatElement({ onSendMessage });
 ```
 
 ```html
 <ss-chat data-theme="dark" data-orientation="left" data-name="Assistant"></ss-chat>
 ```
 
-Every config field has a matching `data-*` attribute (see the table
-below). Tags added later by a framework boot automatically, removing a
-tag from the DOM calls `destroy()`, and editing an attribute live calls
-`updateConfig()` — it's a real custom element, not a one-time page scan.
+Because this is a real custom element registration and not a one-time page scan,
+it keeps working as the DOM changes: a tag added later by a framework boots
+automatically, and editing an attribute live calls `updateConfig()` for you.
 
-`defineChatElement()` is the only thing that requires `onSendMessage` up
-front; it isn't auto-registered on import, since registering a custom
-element is a global side effect.
+**Callbacks always come through JS, never attributes.** A `data-*` attribute is
+always a string, so a function can never be one. Every callback is passed to
+`defineChatElement` exactly as it would be to `createChatbot`:
+
+```js
+defineChatElement({
+  onSendMessage: (message) => fetch('/api/chat', {/* … */}).then((r) => r.json()),
+  afterSubmitMessage: (message, reply) => saveMessage(message, reply),
+  onOpen: () => trackEvent('chat_opened'),
+});
+```
+
+Config fields passed here become **shared defaults** for every instance of the
+tag, and a tag's own `data-*` attribute wins over them — so two tags on one page
+can differ:
+
+```js
+defineChatElement({ onSendMessage, theme: 'light' });
+```
+
+```html
+<ss-chat></ss-chat>
+<!-- light, from the shared default -->
+<ss-chat data-theme="dark"></ss-chat>
+<!-- dark, its own attribute wins -->
+```
+
+`tagName` (default `'ss-chat'`) registers a second variant with a different
+backend:
+
+```js
+defineChatElement({ tagName: 'ss-chat-sales', onSendMessage: toSales });
+```
+
+#### Getting the instance from a tag
+
+`defineChatElement` creates the instance for you, so you don't get it from a
+return value — but it's fully available two ways, both the same object with the
+same [Instance API](#instance-api).
+
+**`tag.bot`** — a getter on the element. Reliable immediately after the tag is
+connected to the DOM, since `connectedCallback` runs synchronously on insertion:
+
+```js
+document.querySelector('ss-chat').bot.open();
+```
+
+**The `ss-chat:ready` event** — dispatched from the tag the moment its instance
+is created, and again if the tag is removed and later reconnected, carrying the
+instance in `event.detail.bot`. Use this when you don't control when or where the
+tag gets inserted:
+
+```js
+document.querySelector('ss-chat').addEventListener('ss-chat:ready', (event) => {
+  event.detail.bot.open();
+});
+```
 
 ## Configuration
 
-Every field below is optional — passed as a camelCase prop to
-`createChatbot()`, or as a kebab-case `data-*` attribute on `<ss-chat>`.
-An invalid value falls back to its default and logs a warning; it never
-throws or blanks the widget.
+Every field below is optional. Pass it as a camelCase prop to `createChatbot()`
+or `defineChatElement()`, or as its kebab-case `data-*` attribute on
+`<ss-chat>`. **An invalid value falls back to its default and logs a warning —
+it never throws or blanks the widget**, and an unrecognized field is ignored the
+same way, so a cached older build never breaks on a config field it doesn't know
+yet.
 
-| Prop | Attribute | Type | Default | Purpose |
-| --- | --- | --- | --- | --- |
-| `theme` | `data-theme` | `'light' \| 'dark'` | `'light'` | Color theme inside the panel |
-| `orientation` | `data-orientation` | `'left' \| 'right'` | `'right'` | Launcher and panel side |
-| `brandColor` | `data-brand-color` | color (hex) | `'#2563eb'` | Accent color; text contrast derived automatically |
-| `name` | `data-name` | string | `'Assistant'` | Header title |
-| `avatar` | `data-avatar` | url | — | Header and agent-bubble avatar |
-| `placeholder` | `data-placeholder` | string | `'Type a message…'` | Composer placeholder |
-| `initialMessages` | `data-initial-messages` | `string[]` (JSON) | `[]` | Rendered before any interaction |
-| `suggestedMessages` | `data-suggested-messages` | `string[]` (JSON) | `[]` | Suggestion chips |
-| `signature` | `data-signature` | boolean | `true` | Show the footer credit |
-| `autoOpen` | `data-auto-open` | boolean | `false` | Open the panel on mount |
-| `collectFeedback` | `data-collect-feedback` | boolean | `false` | Thumbs up/down on agent messages |
-| `collectLeads` | `data-collect-leads` | boolean | `false` | Show a lead capture form |
-| `sessionId` | `data-session` | string | generated | Stamped on every lifecycle payload |
+| Prop / attribute                                | Type                | Default             | What it's for                                                                                                           |
+| ----------------------------------------------- | ------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `theme` · `data-theme`                          | `'light' \| 'dark'` | `'light'`           | Color theme inside the chat panel — background, borders, bubble colors                                                  |
+| `orientation` · `data-orientation`              | `'left' \| 'right'` | `'right'`           | Which side of the screen the launcher and panel sit on                                                                  |
+| `brandColor` · `data-brand-color`               | hex color           | `'#2563eb'`         | Accent color for the launcher, agent-message highlights, and buttons. Text contrast against it is derived automatically |
+| `name` · `data-name`                            | `string`            | `'Assistant'`       | Title shown in the panel header                                                                                         |
+| `avatar` · `data-avatar`                        | url                 | —                   | Image shown in the header and next to every agent message                                                               |
+| `placeholder` · `data-placeholder`              | `string`            | `'Type a message…'` | Placeholder text in the empty composer                                                                                  |
+| `initialMessages` · `data-initial-messages`     | `string[]` (JSON)   | `[]`                | Messages rendered before any interaction — e.g. a greeting                                                              |
+| `suggestedMessages` · `data-suggested-messages` | `string[]` (JSON)   | `[]`                | Suggestion chips above the composer; tapping one auto-submits it                                                        |
+| `signature` · `data-signature`                  | `boolean`           | `true`              | Shows or hides the footer credit                                                                                        |
+| `autoOpen` · `data-auto-open`                   | `boolean`           | `false`             | Opens the panel as soon as the widget mounts                                                                            |
+| `collectFeedback` · `data-collect-feedback`     | `boolean`           | `false`             | Thumbs up/down under every agent message. Pair with [`onFeedbackSubmit`](#callbacks)                                    |
+| `collectLeads` · `data-collect-leads`           | `boolean`           | `false`             | Lead capture form — first name, last name, email, message. Pair with [`onLeadSubmit`](#callbacks)                       |
+| `sessionId` · `data-session`                    | `string`            | auto-generated      | Stamped on every lifecycle payload so you can correlate messages to a session in your own backend                       |
 
-Merging several config sources yourself (e.g. attributes plus a remote
-config fetched later)? Use the same resolver core uses internally:
+Two options are **not** configuration, because neither survives
+`JSON.stringify` (see [Design notes](#design-notes)) and so neither has an
+attribute equivalent. `<ss-chat>` sets `mount` to itself automatically.
 
-```js
-import { resolveConfig, parseAttributes } from '@suppsalism/chatbot';
+| Option       | Type      | Default         | What it's for                                                                                                                                                                                     |
+| ------------ | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mount`      | `Element` | `document.body` | Decides ownership, not layout. Everything the widget creates is a descendant of it, and `destroy()` tears down exactly that subtree. Must be an attached element — throws synchronously otherwise |
+| `instanceId` | `string`  | auto-generated  | Namespaces the DOM ids the widget generates. Pass one only when you need stable selectors for end-to-end tests                                                                                    |
 
-const attrs = parseAttributes(document.querySelector('ss-chat'));
-const config = resolveConfig([attrs, remoteConfig]); // lowest precedence first
-```
+## Message lifecycle
 
-Unknown fields are kept (not stripped) so a newer remote config doesn't
-break an older cached build; `null`/`undefined` values are stripped so
-they can't clobber a lower-precedence layer.
-
-## The message lifecycle
-
-Three stages. `before` and `after` are observational; the middle one
-produces the reply.
+Three stages, correlated by a `messageId` generated once and threaded through all
+three. `before` and `after` are purely observational — the middle one is the only
+one that produces the reply.
 
 ```
 user submits
@@ -177,195 +253,410 @@ user submits
       └─► afterSubmitMessage(message, reply)
 ```
 
-```js
-createChatbot({
-  beforeSubmitMessage: (draft) => {
-    // draft = { text, messageId, sessionId, timestamp }
-    if (draft.text.length > 2000) return false; // cancel — nothing renders
-    return { ...draft, text: draft.text.trim() };
-  },
+```ts
+interface Message {
+  text: string;
+  messageId: string;   // generated once, identical across all three stages
+  sessionId: string;
+  timestamp: number;
+}
 
-  onSendMessage: async (message, { history, config }) => {
-    // Return any of:
-    //   a string                              → rendered as one message
-    //   { text, suggestions? }                → suggestions replace the chip row
-    //   an AsyncIterable<string | { text }>   → streamed into one bubble, chunk by chunk
-    return 'Thanks for reaching out!';
-  },
+interface Reply {
+  text: string;
+  suggestions?: string[];
+}
 
-  afterSubmitMessage: (message, reply) => {
-    // Fire-and-forget — a throw here is caught and routed to onMessageError,
-    // it can never break the chat. Good place for persistence/analytics.
-    saveMessage({ id: message.messageId, text: message.text });
-  },
-});
+interface SendContext {
+  history: readonly Message[];   // the conversation so far
+  config: Readonly<Config>;      // the current resolved config
+}
+
+beforeSubmitMessage?: (draft: Message) => Message | false | Promise<Message | false>;
+
+onSendMessage:        (message: Message, ctx: SendContext) =>
+                        | string
+                        | Reply
+                        | AsyncIterable<string | { text: string }>
+                        | Promise<string | Reply>;
+
+afterSubmitMessage?:  (message: Message, reply: Reply) => void | Promise<void>;
 ```
 
-`onSendMessage` is the only required option — `createChatbot()` throws
-synchronously if it's missing, so a broken integration fails loudly in
-development instead of silently doing nothing in front of a user.
+All three are passed through the JS options object — a function can never be an
+HTML attribute, so none of them has a `data-*` equivalent.
 
-Every message gets a `messageId` generated in stage one, and the same
-message object is threaded through all three callbacks — that's your
-correlation key for linking a question to its answer, and for streaming
-updates.
+### `beforeSubmitMessage`
 
-Core never retries a failed send. Retries, backoff, and timeouts belong
-to your `onSendMessage`, since only you know which failures are safe to
-repeat.
+Optional. Runs before anything renders. Return a modified draft to transform it
+— trim, filter, attach page context — or `false` to cancel, in which case the
+message never appears in the conversation at all.
 
-## Other callbacks
+```js
+beforeSubmitMessage: (draft) => {
+  if (draft.text.length > 2000) return false; // cancelled, nothing renders
+  return { ...draft, text: draft.text.trim() };
+};
+```
 
-All optional, all fire-and-forget — a throw inside any of them is caught
-and routed to `onMessageError` instead of breaking the UI.
+### `onSendMessage`
 
-| Callback | Payload | Fires when |
-| --- | --- | --- |
-| `onReady(bot)` | the instance | The widget is mounted and interactive |
-| `onOpen()` / `onClose()` | — | The panel's visibility changes |
-| `onSuggestionClick(text)` | chip text | A suggestion chip is clicked — return `false` to stop it auto-submitting |
-| `onFeedbackSubmit(fb)` | `{ messageId, value }` | A thumbs up/down is clicked (`collectFeedback: true`) |
-| `onLeadSubmit(fields)` | `{ firstName, lastName, email, message }` | The lead form is submitted (`collectLeads: true`) |
-| `onMessageError(error, message)` | the thrown error | After any lifecycle error has already been degraded visibly |
+**Required** — the one function you must supply, since this package is pure UI
+and can't produce a reply on its own. Omitting it throws at construction rather
+than leaving you with a widget that silently accepts messages and does nothing.
+
+Return a string, a `{ text, suggestions? }` object, or an async iterable to
+stream chunk by chunk into a single bubble:
+
+```js
+// simplest
+onSendMessage: (message) => 'Thanks for reaching out!'
+
+// with suggestion chips for the next turn
+onSendMessage: async (message) => ({
+  text: 'Which plan are you on?',
+  suggestions: ['Free', 'Pro', 'Enterprise'],
+})
+
+// streamed
+onSendMessage: async function* (message, { history }) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ history }),
+  });
+  for await (const chunk of res.body.pipeThrough(new TextDecoderStream())) {
+    yield chunk;
+  }
+}
+```
+
+`ctx.history` is a read-only snapshot of the conversation, and `ctx.config` is
+the current resolved config — read from it rather than closing over a value that
+may go stale after `updateConfig()`.
+
+**This package never retries a failed send.** Retries, backoff, and timeouts
+belong here, since only you know which failures are safe to repeat.
+
+### `afterSubmitMessage`
+
+Optional. Fires once the reply is fully rendered — for a streamed reply, after
+the last chunk. Fire-and-forget: a throw here is caught and routed to
+`onMessageError` and can never break the chat, which makes it the natural place
+for persistence and analytics.
+
+```js
+afterSubmitMessage: (message, reply) => {
+  saveMessage({ id: message.messageId, role: 'user', text: message.text });
+  saveMessage({ replyTo: message.messageId, role: 'agent', text: reply.text });
+};
+```
+
+## Callbacks
+
+All optional, all fire-and-forget — a throw inside any of them is caught and
+routed to `onMessageError` rather than breaking the UI. Like the lifecycle
+callbacks above, these are JS-only and have no attribute equivalent.
+
+```ts
+onReady?:            (bot: ChatbotInstance) => void;
+onOpen?:             () => void;
+onClose?:            () => void;
+onSuggestionClick?:  (text: string) => boolean | void;
+onFeedbackSubmit?:   (feedback: { messageId: string; value: 'up' | 'down' }) => void;
+onLeadSubmit?:       (fields: { firstName: string; lastName: string;
+                                email: string; message: string }) => void;
+onMessageError?:     (error: Error, message: Message) => void;
+```
+
+| Callback             | Fires when                                                      | Notes                                                  |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------------------ |
+| `onReady`            | The widget has mounted and is interactive                       | Once per instance                                      |
+| `onOpen` / `onClose` | The panel opens or closes                                       | However triggered — a launcher click or `bot.open()`   |
+| `onSuggestionClick`  | A suggestion chip is clicked                                    | Return `false` to prevent it from auto-submitting      |
+| `onFeedbackSubmit`   | Thumbs up/down is clicked                                       | Only when `collectFeedback` is on                      |
+| `onLeadSubmit`       | The lead form is submitted                                      | Only when `collectLeads` is on                         |
+| `onMessageError`     | Any lifecycle error, after it has already been degraded visibly | One place to observe every failure — logging, alerting |
 
 ## Instance API
 
-```js
-bot.open();               // show the panel
-bot.close();               // hide the panel
-bot.toggle();
-bot.submit('Hello!');      // programmatic message — runs the full lifecycle
-bot.updateConfig(patch);   // re-validate, merge, re-apply to the DOM
-bot.getState();            // { open, messages, pending }
-bot.destroy();             // remove all DOM, unbind listeners, dispose effects
+The same object with the same methods whether it came from `createChatbot()`,
+`tag.bot`, or the `ss-chat:ready` event.
+
+```ts
+interface ChatbotInstance {
+  id: string;
+  open(): void;
+  close(): void;
+  toggle(): void;
+  submit(text: string): Promise<void>;
+  updateConfig(patch: Partial<Config>): void;
+  getState(): { open: boolean; messages: Message[]; pending: boolean };
+  destroy(): void;
+}
 ```
 
-Always call `destroy()` when you're done with an instance — on an SPA
-route change, for example. Without it you're left with an orphaned
-launcher, orphaned style tags, and live effects running against detached
-nodes.
+| Method                      | What it's for                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open` / `close` / `toggle` | Drive the panel from your own UI — a "Need help?" button elsewhere on the page                                                                                                                                                                                                  |
+| `submit`                    | Sends a message on the user's behalf, running the exact same three-stage lifecycle as a typed submission. Use it to seed a conversation with context, or to drive the chat from a composer of your own                                                                          |
+| `updateConfig`              | Re-validates, merges, and re-applies a partial config live — theme and brand on both the host page and the panel, header and composer text, sections mounting or unmounting as needed                                                                                           |
+| `getState`                  | A snapshot of the current state. Sync your own UI against it — e.g. disable an external button while `pending` is `true`                                                                                                                                                        |
+| `destroy`                   | Removes every node the widget created, unbinds every listener, disposes every reactive effect. **Always call this for a `createChatbot()` instance you're done with**, such as on an SPA route change. Not needed for `<ss-chat>`, where it's automatic on removal from the DOM |
 
-`updateConfig()` is what lets you render immediately from `data-*`
-attributes and apply a remotely-fetched config the moment it arrives,
-instead of blocking first paint on a network round trip:
+## Recipes
+
+### React, Vue, Svelte
+
+The pattern is the same in all three: create on mount, destroy on unmount.
+
+```jsx
+// React
+import { useEffect, useRef } from 'react';
+import { createChatbot } from '@suppsalismjs/chatbot';
+
+function Chat() {
+  const el = useRef(null);
+
+  useEffect(() => {
+    const bot = createChatbot({ mount: el.current, onSendMessage });
+    return () => bot.destroy();
+  }, []);
+
+  return <div ref={el} />;
+}
+```
+
+```vue
+<!-- Vue -->
+<script setup>
+import { onMounted, onUnmounted, ref } from 'vue';
+import { createChatbot } from '@suppsalismjs/chatbot';
+
+const el = ref(null);
+let bot;
+
+onMounted(() => {
+  bot = createChatbot({ mount: el.value, onSendMessage });
+});
+onUnmounted(() => bot?.destroy());
+</script>
+
+<template><div ref="el" /></template>
+```
+
+```svelte
+<!-- Svelte -->
+<script>
+  import { onMount } from 'svelte';
+  import { createChatbot } from '@suppsalismjs/chatbot';
+
+  let el;
+  onMount(() => {
+    const bot = createChatbot({ mount: el, onSendMessage });
+    return () => bot.destroy();
+  });
+</script>
+
+<div bind:this={el}></div>
+```
+
+### Next.js and SSR
+
+Importing this package has no side effects, so it's safe at module scope in a
+server component. `createChatbot` touches the DOM, so call it only after mount:
+
+```jsx
+'use client';
+
+useEffect(() => {
+  const bot = createChatbot({ onSendMessage });
+  return () => bot.destroy();
+}, []);
+```
+
+There's no need for `dynamic(() => …, { ssr: false })` — nothing in this package
+runs on the server unless you call it.
+
+### Applying a remote config without blocking first paint
+
+Render immediately from what you already have, then reconcile when the network
+answers. The widget is interactive the whole time, and `updateConfig` re-validates
+and merges for you:
 
 ```js
-const attrs = parseAttributes(document.querySelector('ss-chat'));
-const bot = createChatbot({ ...resolveConfig([attrs]), onSendMessage });
+const bot = createChatbot({ theme: 'light', onSendMessage });
 
-fetchRemoteConfig().then((remote) => {
-  bot.updateConfig(resolveConfig([attrs, remote]));
+fetchRemoteConfig().then((remote) => bot.updateConfig(remote));
+```
+
+### Driving the widget from your own button
+
+```js
+// npm
+const bot = createChatbot({ onSendMessage });
+document.querySelector('#help').addEventListener('click', () => bot.toggle());
+```
+
+```html
+<!-- CDN -->
+<button onclick="SsChat.instances[0].toggle()">Need help?</button>
+```
+
+With a tag, go through `tag.bot`:
+
+```js
+document.querySelector('#help').addEventListener('click', () => {
+  document.querySelector('ss-chat').bot.toggle();
 });
 ```
 
 ## Styling
 
-The widget spans two documents: the host page and a same-origin iframe
-that the whole panel renders inside, so its CSS and JS are sandboxed from
-whatever the host page has loaded. That's why it looks identical on every
-site it's embedded on.
+**The chat panel renders inside an iframe.** That's what makes it look the same
+on every site regardless of the host page's CSS — and it also means a CSS rule
+you write on the host page cannot reach inside the panel. This surprises people,
+so it's worth knowing before you try.
 
-If you want to reference or override the stylesheet:
+Theming goes entirely through config today — `theme`, `brandColor`, and
+`orientation` are the only knobs. There is currently no option to override
+individual CSS custom properties from config; if you need deeper visual control
+than those three provide, your only option is forking the stylesheet.
 
-```js
-import '@suppsalism/chatbot/style.css';
-```
-
-Every class name is prefixed `ss-`, so it won't collide with your own
-styles.
-
-## CDN usage
-
-Same public API, no build step:
-
-```html
-<script>
-  // Safe to call before the bundle has loaded — queued and drained on init.
-  window.ssChat = window.ssChat || [];
-  ssChat.push(['defineChatElement', { onSendMessage: (msg) => myBackend.ask(msg.text) }]);
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@suppsalism/chatbot@1/dist/chatbot.umd.js" defer></script>
-<ss-chat data-theme="dark"></ss-chat>
-```
-
-Or call it directly once the script has loaded:
+The package ships a standalone copy for exactly that:
 
 ```js
-const bot = SsChat.createChatbot({ onSendMessage: SsChat.echoReply });
-SsChat.version;          // which version is loaded — the first thing to check when debugging
-SsChat.get(bot.id);       // look up a running instance by id
+import '@suppsalismjs/chatbot/style.css';
 ```
 
-`window.SsChat` mirrors every npm export under the exact same name, so any
-snippet in this README works in both worlds — only the acquisition line
-changes. Loading the script twice (two plugins on the same page each
-embedding the widget, for example) warns and no-ops rather than clobbering
-the first instance's state.
+**Importing it changes nothing on its own.** The widget injects its CSS from
+inside the JS bundle — it has to, because it styles an iframe document it
+creates at runtime and can't rely on the host page having loaded a stylesheet.
+This file is a readable reference to fork, not a runtime dependency, and it
+concatenates two sheets that are injected into two different documents:
+`shell.css` into the host page, `widget.css` into the iframe. They aren't
+interchangeable.
 
 ## TypeScript
 
-Type declarations ship with the package, generated from JSDoc — no
-separate `@types` package needed, and no need to write the library in
-TypeScript to get autocomplete. CDN consumers can install the package for
-types only:
+Type declarations ship with the package, generated from JSDoc — no separate
+`@types` package, and the library doesn't need to be written in TypeScript for
+you to get autocomplete. CDN consumers can install it for types only, without
+shipping it at runtime:
 
 ```bash
-npm i -D @suppsalism/chatbot   # types only — the runtime comes from the CDN
+npm i -D @suppsalismjs/chatbot   # types only — the runtime still comes from the CDN
 ```
 
 ```ts
 declare global {
   interface Window {
-    SsChat: typeof import('@suppsalism/chatbot');
+    SsChat: typeof import('@suppsalismjs/chatbot') & {
+      version: string;
+      instances: ReturnType<typeof import('@suppsalismjs/chatbot').createChatbot>[];
+      get(id: string): ReturnType<typeof import('@suppsalismjs/chatbot').createChatbot> | undefined;
+    };
   }
 }
 ```
 
-## What's deliberately not in this package
-
-If you're looking for one of these, it belongs in the layer that connects
-this widget to your backend — not here, and not ever:
-
-`apiUrl` · `chatbotKey` · `endpoints` · `retries` · `timeout` ·
-`authToken` · any hardcoded hostname · fetching config from anywhere ·
-persisting messages, feedback, or leads
-
-Presentation and behavior settings (`theme`, `orientation`, `autoOpen`,
-`signature`, ...) aren't options either — they're configuration, per the
-rule above.
+`window.SsChat` is every named export, plus three CDN-only additions —
+`version`, `instances`, and `get(id)` — that don't exist on the npm import,
+which is why `typeof import(...)` alone isn't enough on its own.
 
 ## Browser support
 
-Evergreen browsers only — no polyfills are shipped or required. There are
-no runtime dependencies at all; the only thing this package needs from
-your app is a modern JS environment.
+Evergreen browsers only. No polyfills are shipped or required, and there are no
+runtime dependencies at all — the only thing this package needs from your app is
+a modern JS environment.
 
-## Development
+## FAQ and troubleshooting
+
+**Nothing appears on the page.**
+Check the console for a `[ss-chat]` message. Usual causes: `onSendMessage` wasn't
+passed (it throws at construction), `mount` isn't an attached element, or
+`defineChatElement` was never called, so `<ss-chat>` is an unknown tag.
+
+**The widget appears, but sending shows an error bubble.**
+`onSendMessage` returned `undefined` (or something that isn't a string, a
+`{ text }` object, or an async iterable) — an `async` function with no
+`return` is the common cause. Core throws while trying to render that reply,
+which is caught and surfaced as the normal error path: an error bubble
+renders and `onMessageError` fires with the underlying error.
+
+**`SsChat is not defined`.**
+Your inline script ran before the CDN bundle loaded. Use the
+`window.ssChat.push([...])` queue from [Quick start](#quick-start), which is safe
+to call before the bundle arrives.
+
+**My CSS doesn't affect the panel.**
+Expected — the panel is in an iframe. See [Styling](#styling): the only
+theming knobs today are the `theme`, `brandColor`, and `orientation` config
+fields, or forking the stylesheet entirely.
+
+**A Content-Security-Policy blocks the styles.**
+The widget injects a `<style>` element, which a strict `style-src` blocks.
+There's currently no public option to attach a nonce to it — open an issue if
+you hit this.
+
+**Two copies got loaded.**
+The bundle warns and no-ops rather than clobbering an existing global. Check
+`SsChat.version` in the console and look for a second `<script>`, often from a
+CMS plugin.
+
+**Which version am I running?**
+`SsChat.version`. Always pin a major (`@1`) in the CDN URL, never `@latest`.
+
+**Does it retry a failed send?**
+No. Retries, backoff, and timeouts belong in your `onSendMessage`.
+
+**Can I use it without the iframe?**
+Not currently. The iframe isolates the widget's JavaScript as well as its CSS,
+which is what makes it behave consistently across host pages.
+
+## Design notes
+
+One rule decides the shape of this API:
+
+> If it survives `JSON.stringify`, it's configuration. If it doesn't — a
+> function, a DOM node — it's an option.
+
+Themes, copy, and feature flags are plain serializable config, safe to generate
+from `data-*` attributes or a dashboard response. Functions and DOM nodes are
+options passed in code.
+
+That's a security property, not just tidiness: attributes and any remote config
+you merge in can only ever produce serializable values, so external input can
+never inject a function or a DOM node into the widget. It's also why `mount` has
+no attribute equivalent, and why every callback is JS-only.
+
+The corollary is that **no config field is required** — deliberately, since a
+required field is one a cached older build could be missing. Invalid values fall
+back to defaults and unknown fields are ignored, so config can evolve without
+breaking widgets already deployed on pages you don't control.
+
+## Examples
+
+Three runnable pages in [`examples/`](./examples), covering the UMD/CDN global,
+the `<ss-chat>` element, and a streamed reply:
 
 ```bash
-npm install
-npm run build       # builds both the npm entry (cjs/es/modern) and the CDN/UMD bundle
-npm run dev          # watches and rebuilds the npm entry
-npm test             # runs the test suite (vitest + jsdom)
-npm run test:watch
+npm install && npm run build
+npm run examples     # http://localhost:5000/examples/
 ```
 
-The codebase is organized bottom-up: a signal-based reactive store
-(`src/lib/store/signal.js`), a pure config layer (`src/lib/config/`), the
-lifecycle contract (`src/lib/lifecycle.js`), one class per UI piece under
-`src/lib/component/` (each with `.element` and `.destroy()`), and the
-host-page/iframe mount layer (`src/lib/mount/`) — all wired together by
-`src/core.js`. If you're contributing, changes to the message lifecycle
-or the config schema are the two places to be most careful: both are part
-of the package's public contract.
+None of them makes a network call — every `onSendMessage` produces its reply
+locally, which is the whole point of the boundary.
 
-## Versioning
+## Contributing
 
-This package publishes pinnable exact versions (`@1.2.3`) alongside a
-`@1` major alias for the CDN build, and behavior never changes within a
-major version. Renaming or removing a lifecycle callback, a config field,
-an instance method, or a key on `window.SsChat` is a breaking change;
-adding a new optional one is not.
+Issues and pull requests welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for
+the development setup, the source layout, the coding conventions, and how to run
+the test suite.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md). This package follows semantic versioning:
+config fields, callbacks, payload shapes, and the instance API are the public
+surface, and none of them change within a major version.
 
 ## License
 
