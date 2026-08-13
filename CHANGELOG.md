@@ -75,8 +75,3 @@ entry points resolve to the same surface as before.
 
 Initial package: `createChatbot`, `defineChatElement` / `<ss-chat>`, the schema-driven config
 system, the signal store, and the iframe-isolated widget.
-
-<!--
-Version note for maintainers: package.json is at 0.1.0, but the README instructs CDN users to pin
-`@1` and a 1.0.0 tarball exists in the working tree. Reconcile these before the next publish.
--->

@@ -39,8 +39,14 @@ export class Feedback {
     down.appendChild(createIcon(this.doc, { path: THUMB_DOWN_PATH, size: 16 }));
     wrapper.appendChild(down);
 
-    this.on(up, 'click', () => this.submit('up', up, down));
-    this.on(down, 'click', () => this.submit('down', down, up));
+    this.on(up, 'click', () => {
+      if (up.disabled) return;
+      this.submit('up', up, down);
+    });
+    this.on(down, 'click', () => {
+      if (down.disabled) return;
+      this.submit('down', down, up);
+    });
 
     this.element = wrapper;
     this.upButton = up;
@@ -52,6 +58,13 @@ export class Feedback {
     activeButton.classList.add(CLASS.feedbackActive);
     otherButton.classList.remove(CLASS.feedbackActive);
     this.onSubmit({ messageId: this.messageId, value });
+  }
+
+  setDisabled(disabled) {
+    this.upButton.disabled = disabled;
+    this.downButton.disabled = disabled;
+    this.upButton.classList.toggle(CLASS.feedbackDisabled, disabled);
+    this.downButton.classList.toggle(CLASS.feedbackDisabled, disabled);
   }
 
   destroy() {

@@ -55,6 +55,7 @@ export const CLASS = {
   feedbackUp: 'ss-feedback-up',
   feedbackDown: 'ss-feedback-down',
   feedbackActive: 'ss-feedback-active',
+  feedbackDisabled: 'ss-disabled',
 
   // composer
   composerWrapper: 'ss-composer-wrapper',

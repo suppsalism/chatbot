@@ -21,6 +21,7 @@ export class Message {
     this.messageId = messageId;
     this.onFeedback = onFeedback;
     this.children = [];
+    this.feedback = null;
 
     this.build(text);
   }
@@ -70,6 +71,7 @@ export class Message {
         messageId: this.messageId,
         onSubmit: this.onFeedback,
       });
+      this.feedback = feedback;
       this.children.push(feedback);
       container.appendChild(feedback.element);
     }
@@ -80,6 +82,11 @@ export class Message {
 
   setText(text) {
     this.textSpan.textContent = text;
+  }
+
+  /** No-op when this message has no feedback pair (user messages, or collectFeedback off). */
+  setFeedbackDisabled(disabled) {
+    this.feedback?.setDisabled(disabled);
   }
 
   destroy() {

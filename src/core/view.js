@@ -80,6 +80,17 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
 
   doc.body.appendChild(wrapper.element);
 
+  async function handleFeedback(fb) {
+    messageWrapper.setFeedbackDisabled(true);
+    try {
+      await safeInvoke(callbacks.onFeedbackSubmit, callbacks, fb);
+    } catch {
+      // already reported via safeInvoke -> onMessageError
+    } finally {
+      messageWrapper.setFeedbackDisabled(false);
+    }
+  }
+
   function handleSuggestionClick(text) {
     const allow = safeInvoke(callbacks.onSuggestionClick, callbacks, text);
     if (allow === false) return;
@@ -99,10 +110,7 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         messageId,
         avatar: role === 'agent' ? config.avatar : undefined,
         brandColor: config.brandColor,
-        onFeedback:
-          role === 'agent' && config.collectFeedback
-            ? (fb) => safeInvoke(callbacks.onFeedbackSubmit, callbacks, fb)
-            : undefined,
+        onFeedback: role === 'agent' && config.collectFeedback ? handleFeedback : undefined,
       });
     },
 
@@ -114,9 +122,7 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         messageId,
         avatar: config.avatar,
         brandColor: config.brandColor,
-        onFeedback: config.collectFeedback
-          ? (fb) => safeInvoke(callbacks.onFeedbackSubmit, callbacks, fb)
-          : undefined,
+        onFeedback: config.collectFeedback ? handleFeedback : undefined,
       });
       return {
         update: (text) => message.setText(text),

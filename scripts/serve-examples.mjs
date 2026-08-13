@@ -10,7 +10,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = path.resolve(import.meta.dirname, '..');
-const port = Number(process.env.PORT ?? 3002);
+const port = Number(process.env.PORT ?? 5000);
 
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',

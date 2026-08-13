@@ -315,6 +315,8 @@ body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message.ss-left
   min-width: 30px;
   max-width: 30px;
   height: 30px;
+  background-color: var(--ss-brand);
+  border-radius: 99px;
 }
 
 .ss-message-wrapper .ss-message-container .ss-message-avatar-wrapper .ss-message-avatar {
@@ -353,6 +355,7 @@ body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message.ss-left
   display: flex;
   gap: 4px;
   padding: 0 4px;
+  margin-top: 8px;
 }
 
 .ss-feedback-button {
@@ -370,6 +373,11 @@ body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message.ss-left
 
 .ss-feedback-button.ss-feedback-active {
   color: var(--ss-brand);
+}
+
+.ss-feedback-button.ss-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 /* END: feedback component */
 

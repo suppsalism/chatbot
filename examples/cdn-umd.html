@@ -46,7 +46,14 @@
             await new Promise((resolve) => setTimeout(resolve, 600));
             return `You said: "${message.text}"`;
           },
-          onFeedbackSubmit: (feedback) => console.log('feedback', feedback),
+          onFeedbackSubmit: (fb) =>
+            new Promise((resolve) => {
+              console.log('feedback pending', fb);
+              setTimeout(() => {
+                console.log('feedback resolved', fb);
+                resolve();
+              }, 1500);
+            }),
         },
       ]);
     </script>

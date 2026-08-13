@@ -71,6 +71,11 @@ export class MessageWrapper {
     return message;
   }
 
+  /** Locks every feedback pair in the conversation together (spec: same disable pattern as suggestions). */
+  setFeedbackDisabled(disabled) {
+    this.children.forEach((child) => child.setFeedbackDisabled(disabled));
+  }
+
   destroy() {
     this.observer.disconnect();
     this.hideTyping();
