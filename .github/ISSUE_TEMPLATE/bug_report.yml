@@ -14,7 +14,7 @@ body:
     attributes:
       label: Version
       description: 'From npm, or `SsChat.version` in the console for CDN users.'
-      placeholder: 1.0.0
+      placeholder: 0.1.0
     validations:
       required: true
 

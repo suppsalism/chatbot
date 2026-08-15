@@ -24,7 +24,6 @@ describe('splitOptions', () => {
       'onClose',
       'onSuggestionClick',
       'onFeedbackSubmit',
-      'onLeadSubmit',
       'onMessageError',
     ];
     const options = Object.fromEntries(names.map((name) => [name, () => {}]));

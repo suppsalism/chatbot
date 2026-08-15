@@ -358,19 +358,6 @@ describe('createChatbot — updateConfig', () => {
     );
   });
 
-  it('mounts and unmounts the lead form as collectLeads flips', () => {
-    bot = createChatbot({ mount, onSendMessage: noopSend });
-    const doc = mount.querySelector('iframe').contentWindow.document;
-
-    expect(doc.querySelector('.ss-lead-form-wrapper')).toBeNull();
-
-    bot.updateConfig({ collectLeads: true });
-    expect(doc.querySelector('.ss-lead-form-wrapper')).not.toBeNull();
-
-    bot.updateConfig({ collectLeads: false });
-    expect(doc.querySelector('.ss-lead-form-wrapper')).toBeNull();
-  });
-
   it('mounts and unmounts the signature as it flips', () => {
     bot = createChatbot({ mount, onSendMessage: noopSend });
     const doc = mount.querySelector('iframe').contentWindow.document;

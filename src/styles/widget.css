@@ -664,51 +664,88 @@ body.ss-theme-dark .ss-suggestion {
 }
 /* END: suggestion wrapper component */
 
-/* START: lead form component */
-body.ss-theme-light .ss-lead-form-wrapper input {
+/* START: form component (attached to an agent message by a reply's `form`) */
+body.ss-theme-light .ss-form .ss-form-control {
   background-color: #fff;
   border: 1px solid #e7e7e7;
   color: #000;
 }
 
-body.ss-theme-dark .ss-lead-form-wrapper input {
+body.ss-theme-dark .ss-form .ss-form-control {
   background-color: rgba(258, 258, 258, 0.1);
   border: 1px solid rgba(258, 258, 258, 0.1);
   color: #c1c1c1;
 }
 
-.ss-lead-form-wrapper {
+.ss-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.ss-lead-form-field {
+.ss-form-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ss-form-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
 }
 
-.ss-lead-form-field input {
+.ss-form-field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.ss-form-control {
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
+  font-family: inherit;
   outline: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.ss-lead-form-action {
+.ss-form-field-inline .ss-form-control {
+  width: auto;
+  flex: none;
+}
+
+.ss-form textarea.ss-form-control {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.ss-form-action {
   display: flex;
   justify-content: flex-end;
 }
 
-.ss-lead-form-action button {
+.ss-form-submit {
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
   background-color: var(--ss-brand);
   color: #fff;
+  font-size: 13px;
   cursor: pointer;
 }
-/* END: lead form component */
+
+.ss-form.ss-disabled {
+  opacity: 0.6;
+}
+
+.ss-form.ss-disabled .ss-form-submit {
+  cursor: not-allowed;
+}
+/* END: form component */

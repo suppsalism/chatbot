@@ -61,6 +61,7 @@ server.listen(port, () => {
   console.log(`\n  Examples: http://localhost:${port}/examples/\n`);
   console.log('  cdn-umd.html          — UMD global + push queue');
   console.log('  custom-element.html   — <ss-chat> driven by the DOM');
+  console.log('  reply-forms.html       — forms attached to replies');
   console.log('  esm-streaming.html    — createChatbot + streamed reply\n');
   console.log('  (run `npm run build` first — these pages load from ../dist/)\n');
 });

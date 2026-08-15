@@ -83,13 +83,6 @@ export const CONFIG_SCHEMA = [
     validate: (v) => typeof v === 'boolean',
   },
   {
-    key: 'collectLeads',
-    attribute: 'data-collect-leads',
-    type: 'boolean',
-    default: false,
-    validate: (v) => typeof v === 'boolean',
-  },
-  {
     // The one field core generates for itself (spec §4.3) — resolveConfig
     // stamps a UUID here when no layer supplies one.
     key: 'sessionId',

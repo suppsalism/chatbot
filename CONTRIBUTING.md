@@ -45,6 +45,7 @@ src/
 ├── umd.js              CDN entry — the only file permitted to touch `window`
 ├── echo-reply.js       public helper export
 ├── core/               createChatbot, defineChatElement, the view façade, state, lifecycle
+│                       — has an exclusion rule, see below before adding to it
 ├── components/         one class per UI piece; each owns build() and destroy()
 ├── config/             CONFIG_SCHEMA and the resolve / parse / split pipeline
 ├── constants/          every class name, id, tag name and event name the widget writes
@@ -60,7 +61,55 @@ docs/                   the specification and implementation guide
 assets/                 README images (not shipped in the package)
 ```
 
-A few conventions that are load-bearing:
+### What belongs in `core/`
+
+"Core" is a magnet: every folder named that eventually rots, because any file can be argued into
+it. So it has an exclusion rule, and new files have to pass it.
+
+> `core/` is the code that knows a **chatbot instance** exists — its construction, its state, its
+> message pipeline, its view façade, its callback contract. **If a module doesn't need to know a
+> chatbot exists, it belongs somewhere else**: `utils/`, `config/`, `dom/`, `reactive/`, or
+> `components/`.
+
+The test that keeps this honest is that `core/` stays encapsulated: outside of tests, nothing
+imports `view`, `state`, `lifecycle`, `safe-invoke`, or `form-spec`. Only `create-chatbot` and
+`define-element` escape, through `index.js`. If a fifth file starts being imported from outside
+`core/`, either it was misfiled or the boundary has sprung a leak — check which before adding to it.
+
+Two judgement calls this rule has already settled, recorded so they don't get relitigated:
+
+- **`safe-invoke.js` stays**, despite looking like a util — 26 lines, zero imports. It reads
+  `callbacks.onMessageError`, so it encodes a core policy ("an observer may never break the chat"),
+  not a generic helper. `utils/` is for modules with no idea a chatbot exists.
+- **`form-spec.js` fails the rule** and is knowingly left in place. It is a pure descriptor
+  validator — the same job `config/resolve.js` does, for a reply's `form` instead of the widget
+  config. Moving it to `config/` would imply it validates widget configuration, and `src/forms/`
+  would be a one-file folder. Its only consumer is `view.js`. **Revisit when a second entity type
+  arrives**: a `card` or `buttons` reply would give `src/forms/` (or `src/entities/`) enough
+  substance to be a real home, and that is the moment to move it.
+
+### `view.js` is the file most likely to need splitting next
+
+Not a rule, a heads-up. `core/view.js` is the largest file in `src/` (~230 lines) and does three
+jobs in one closure:
+
+1. **Assembly** — constructing the component tree (lines ~32–72).
+2. **Orchestration** — `handleFeedback`, `handleSuggestionClick`, `runFormSubmit`, the handlers that
+   sit between a component's event and the rest of core.
+3. **The façade** — the `view` object `create-chatbot.js` and `lifecycle.js` talk to.
+
+It is fine at this size, and the seam is obvious: façade on one side, assembly on the other. But
+the split is **not free**, which is why it hasn't happened. Every façade method closes over the
+component instances created during assembly (`messageWrapper`, `suggestionWrapper`, `thead`,
+`composer`, and the reassignable `signature`), and `handleSuggestionClick` closes over `view`
+itself, before `view` is defined. Separating them means passing all of that explicitly, which
+trades a long file for a wide parameter list.
+
+So: don't split it preemptively. Split it when adding to it starts feeling cramped — and when you
+do, move the façade out and leave assembly behind, since the façade is the part with a real
+contract. Growing it by a couple of methods is not a reason to reach for this.
+
+A few other conventions that are load-bearing:
 
 - **`CONFIG_SCHEMA` is the single source of truth.** Defaults, the attribute parser, validation,
   and the observed attribute list all derive from it. Adding an option means adding one row there

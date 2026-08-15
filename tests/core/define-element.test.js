@@ -27,7 +27,7 @@ describe('defineChatElement', () => {
     const observed = customElements.get(tagName).observedAttributes;
     expect(observed).toContain('data-theme');
     expect(observed).toContain('data-name');
-    expect(observed).toContain('data-collect-leads');
+    expect(observed).toContain('data-collect-feedback');
   });
 
   it('boots an instance the moment the tag is connected', () => {

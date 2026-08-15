@@ -10,7 +10,6 @@ const CALLBACK_KEYS = [
   'onClose',
   'onSuggestionClick',
   'onFeedbackSubmit',
-  'onLeadSubmit',
   'onMessageError',
 ];
 

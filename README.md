@@ -34,7 +34,7 @@ reply — this package builds the widget, renders it, and runs every interaction
   ]);
 </script>
 <script
-  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@1/dist/chatbot.umd.js"
+  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@0.1/dist/chatbot.umd.js"
   defer
 ></script>
 
@@ -219,7 +219,6 @@ yet.
 | `signature` · `data-signature`                  | `boolean`           | `true`              | Shows or hides the footer credit                                                                                        |
 | `autoOpen` · `data-auto-open`                   | `boolean`           | `false`             | Opens the panel as soon as the widget mounts                                                                            |
 | `collectFeedback` · `data-collect-feedback`     | `boolean`           | `false`             | Thumbs up/down under every agent message. Pair with [`onFeedbackSubmit`](#callbacks)                                    |
-| `collectLeads` · `data-collect-leads`           | `boolean`           | `false`             | Lead capture form — first name, last name, email, message. Pair with [`onLeadSubmit`](#callbacks)                       |
 | `sessionId` · `data-session`                    | `string`            | auto-generated      | Stamped on every lifecycle payload so you can correlate messages to a session in your own backend                       |
 
 Two options are **not** configuration, because neither survives
@@ -262,9 +261,16 @@ interface Message {
 }
 
 interface Reply {
-  text: string;
-  suggestions?: string[];
+  text: string;                  // required
+  suggestions?: string[];        // chips for the next turn
+  form?: FormSpec;               // a form rendered inside this message
 }
+
+type SendResult =
+  | Reply                                     // one agent message
+  | Reply[]                                   // one agent message per element
+  | string                                    // shorthand for { text }
+  | AsyncIterable<string | { text: string }>; // streamed into a single bubble
 
 interface SendContext {
   history: readonly Message[];   // the conversation so far
@@ -274,12 +280,9 @@ interface SendContext {
 beforeSubmitMessage?: (draft: Message) => Message | false | Promise<Message | false>;
 
 onSendMessage:        (message: Message, ctx: SendContext) =>
-                        | string
-                        | Reply
-                        | AsyncIterable<string | { text: string }>
-                        | Promise<string | Reply>;
+                        SendResult | Promise<SendResult>;
 
-afterSubmitMessage?:  (message: Message, reply: Reply) => void | Promise<void>;
+afterSubmitMessage?:  (message: Message, reply: Reply | Reply[]) => void | Promise<void>;
 ```
 
 All three are passed through the JS options object — a function can never be an
@@ -304,8 +307,9 @@ beforeSubmitMessage: (draft) => {
 and can't produce a reply on its own. Omitting it throws at construction rather
 than leaving you with a widget that silently accepts messages and does nothing.
 
-Return a string, a `{ text, suggestions? }` object, or an async iterable to
-stream chunk by chunk into a single bubble:
+Return a string, a reply object, an **array of reply objects** for several
+bubbles in one turn, or an async iterable to stream chunk by chunk into a single
+bubble:
 
 ```js
 // simplest
@@ -316,6 +320,13 @@ onSendMessage: async (message) => ({
   text: 'Which plan are you on?',
   suggestions: ['Free', 'Pro', 'Enterprise'],
 })
+
+// several messages in one turn — one bubble per element
+onSendMessage: async (message) => [
+  { text: 'Got it.' },
+  { text: "Here's what I found." },
+  { text: 'Anything else?' },
+]
 
 // streamed
 onSendMessage: async function* (message, { history }) {
@@ -329,9 +340,152 @@ onSendMessage: async function* (message, { history }) {
 }
 ```
 
+Each element of an array becomes its own message — its own bubble, its own
+`messageId`, its own feedback buttons, its own conversation entry. Suggestion
+chips are a single row, so if several elements carry `suggestions`, the last
+non-empty set wins. A streamed reply is always one bubble and carries no form.
+
 `ctx.history` is a read-only snapshot of the conversation, and `ctx.config` is
 the current resolved config — read from it rather than closing over a value that
 may go stale after `updateConfig()`.
+
+### Forms
+
+Any reply can carry a `form`, rendered inside that message's bubble. This is how
+you collect anything from a visitor — an email, a phone number, a plan choice —
+at the moment in the conversation where it makes sense, rather than from a
+permanent form bolted to the panel.
+
+```js
+onSendMessage: async (message) => ({
+  text: 'Happy to help! Mind sharing where to reach you?',
+  form: {
+    title: 'Please share your name and email so we can follow up with you later.',
+    submitLabel: 'Send',
+    fields: [
+      { name: 'name', label: 'Name', required: true },
+      { name: 'email', label: 'Email', type: 'email', required: true },
+      { name: 'note', label: 'Anything else?', type: 'textarea' },
+    ],
+    onSubmit: async (values) => {
+      await saveLead(values); // { name, email, note }
+      return { text: "Thanks! We'll be in touch." }; // answers in the conversation
+    },
+  },
+});
+```
+
+**The handler lives on the form itself.** There is no widget-level
+`onFormSubmit`, because each form knows what it is for — the code that consumes
+the values sits next to the fields that produce them, and you never dispatch on
+an id you had to invent.
+
+```ts
+interface FormSpec {
+  fields: FormField[]; // required
+  title?: string; // text above the fields
+  submitLabel?: string; // button text; defaults to 'Send'
+  id?: string; // comes back as ctx.formId; defaults to the message's id
+  onSubmit?: (
+    values: FormValues,
+    ctx: FormContext
+  ) =>
+    | void // lock the form
+    | false // leave it editable — a server-side rejection
+    | SendResult // answer in the conversation, then lock
+    | Promise<void | false | SendResult>;
+}
+
+interface FormField {
+  name: string; // required — the key this field's value gets in `values`
+  label?: string; // defaults to `name`
+  type?: 'text' | 'email' | 'tel' | 'url' | 'number' | 'textarea' | 'select' | 'checkbox'; // defaults to 'text'
+  required?: boolean; // enforced by the browser, not by this package
+  placeholder?: string;
+  value?: string | boolean; // prefill; boolean for a checkbox
+  options?: Array<string | { value: string; label?: string }>; // `select` only
+}
+
+type FormValues = Record<string, string | boolean>; // checkboxes are booleans
+
+interface FormContext {
+  formId: string; // the form's `id`, or the message's id
+  messageId: string; // the agent message the form is attached to
+  sessionId: string;
+}
+```
+
+`fields` is the only required key, and every field needs a `name`. An unknown
+`type` degrades to `text` with a warning.
+
+`onSubmit(values, ctx)` receives the values keyed by field name — checkboxes as
+booleans, everything else as strings — and `ctx` of
+`{ formId, messageId, sessionId }`. What you return decides what happens next:
+
+| Return                          | Effect                                                                |
+| ------------------------------- | --------------------------------------------------------------------- |
+| a reply, or an array of replies | Rendered as new agent messages, and the form locks                    |
+| `false`                         | The form stays editable — use this to reject a submission server-side |
+| anything else                   | The form locks, nothing is rendered                                   |
+
+Locking is what stops the same lead being submitted twice. **Validation is
+native** — `required` and `type="email"` are enforced by the browser, so there
+is no validation engine here and no regex config.
+
+There is no `password` field type, deliberately. A reply can be described by
+your backend or by a model, and a password prompt rendered inside a brand's own
+chat widget is a credible phishing surface with no legitimate use. An invalid
+field is dropped with a warning and the rest of the form still renders, so one
+bad field never costs you the whole reply.
+
+#### Multi-step flows
+
+`onSubmit` returns the same shape `onSendMessage` does, and a reply can carry a
+form — so **a form can answer with another form**. That's all a multi-step flow
+is; there's no wizard API to learn:
+
+```js
+const step2 = {
+  text: 'Great. When suits you?',
+  form: {
+    fields: [{ name: 'slot', type: 'select', options: ['Morning', 'Afternoon'] }],
+    onSubmit: (values) => bookSlot(values).then(() => ({ text: 'Booked — see you then.' })),
+  },
+};
+
+onSendMessage: async () => ({
+  text: 'Want to book a demo?',
+  form: {
+    fields: [{ name: 'email', label: 'Email', type: 'email', required: true }],
+    onSubmit: (values) => (saveLead(values), step2), // ← returns the next step
+  },
+});
+```
+
+Each step is its own message, so earlier steps stay visible and locked above the
+current one — a readable record of what was asked and answered. Depth is bounded
+by the user actually submitting each step, so "a form returning a form" is a
+chain of separate turns, not recursion. There is no built-in Back button; if you
+want one, return an earlier step from a later `onSubmit`.
+
+#### When the form is described by your backend
+
+JSON has no functions, so a reply you return straight from `fetch` can describe
+a form but cannot carry its handler. Attach it on the way through — this is the
+canonical shape for a server-driven conversation:
+
+```js
+const handlers = {
+  lead: (values) => saveLead(values),
+  booking: (values) => bookDemo(values),
+};
+
+onSendMessage: async (message) => {
+  const reply = await (await fetch('/api/chat')).json();
+  if (reply.form) reply.form.onSubmit = handlers[reply.form.id];
+  return reply;
+};
+```
 
 **This package never retries a failed send.** Retries, backoff, and timeouts
 belong here, since only you know which failures are safe to repeat.
@@ -362,8 +516,6 @@ onOpen?:             () => void;
 onClose?:            () => void;
 onSuggestionClick?:  (text: string) => boolean | void;
 onFeedbackSubmit?:   (feedback: { messageId: string; value: 'up' | 'down' }) => void;
-onLeadSubmit?:       (fields: { firstName: string; lastName: string;
-                                email: string; message: string }) => void;
 onMessageError?:     (error: Error, message: Message) => void;
 ```
 
@@ -373,7 +525,6 @@ onMessageError?:     (error: Error, message: Message) => void;
 | `onOpen` / `onClose` | The panel opens or closes                                       | However triggered — a launcher click or `bot.open()`   |
 | `onSuggestionClick`  | A suggestion chip is clicked                                    | Return `false` to prevent it from auto-submitting      |
 | `onFeedbackSubmit`   | Thumbs up/down is clicked                                       | Only when `collectFeedback` is on                      |
-| `onLeadSubmit`       | The lead form is submitted                                      | Only when `collectLeads` is on                         |
 | `onMessageError`     | Any lifecycle error, after it has already been degraded visibly | One place to observe every failure — logging, alerting |
 
 ## Instance API
@@ -603,7 +754,9 @@ The bundle warns and no-ops rather than clobbering an existing global. Check
 CMS plugin.
 
 **Which version am I running?**
-`SsChat.version`. Always pin a major (`@1`) in the CDN URL, never `@latest`.
+`SsChat.version`. Always pin in the CDN URL, never `@latest`. While the package
+is pre-1.0, pin the minor (`@0.1`) — under semver a `0.x` minor bump is allowed
+to break, so `@0` is not a safe range. Once 1.0 ships, `@1` becomes the right pin.
 
 **Does it retry a failed send?**
 No. Retries, backoff, and timeouts belong in your `onSendMessage`.

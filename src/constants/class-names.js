@@ -75,10 +75,17 @@ export const CLASS = {
   suggestion: 'ss-suggestion',
   suggestionDisabled: 'ss-disabled',
 
-  // lead form
-  leadFormWrapper: 'ss-lead-form-wrapper',
-  leadFormField: 'ss-lead-form-field',
-  leadFormAction: 'ss-lead-form-action',
+  // form (attached to an agent message by a reply's `form`)
+  form: 'ss-form',
+  formTitle: 'ss-form-title',
+  formField: 'ss-form-field',
+  formFieldInline: 'ss-form-field-inline',
+  formLabel: 'ss-form-label',
+  formControl: 'ss-form-control',
+  formAction: 'ss-form-action',
+  formSubmit: 'ss-form-submit',
+  formSubmitted: 'ss-form-submitted',
+  formDisabled: 'ss-disabled',
 
   // signature
   signatureWrapper: 'ss-signature-wrapper',

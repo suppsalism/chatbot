@@ -35,7 +35,6 @@ import { safeInvoke } from './safe-invoke';
  * @property {boolean} [signature=true] Show the footer credit.
  * @property {boolean} [autoOpen=false] Open the panel on mount.
  * @property {boolean} [collectFeedback=false] Show thumbs up/down on agent messages.
- * @property {boolean} [collectLeads=false] Show the lead form (first name, last name, email, message).
  * @property {string} [sessionId] Stamped on every lifecycle payload; a UUID is generated when omitted.
  *
  * -- message lifecycle (spec §6) --
@@ -43,12 +42,12 @@ import { safeInvoke } from './safe-invoke';
  *   (object|false|Promise<object|false>)} [beforeSubmitMessage] Transform or cancel (return false)
  *   before the user bubble renders.
  * @property {(message: {text: string, messageId: string, sessionId: string, timestamp: number},
- *   ctx: {history: object[], config: object}) =>
- *   (string|{text: string, suggestions?: string[]}|AsyncIterable<string|{text: string}>|Promise<any>)}
+ *   ctx: {history: object[], config: object}) => (SendResult|Promise<SendResult>)}
  *   [onSendMessage] REQUIRED — throws synchronously at construction if omitted. Produces the reply;
  *   core never retries.
- * @property {(message: object, reply: {text: string, suggestions?: string[]}) => (void|Promise<void>)}
- *   [afterSubmitMessage] Fire-and-forget; a throw is caught and routed to onMessageError.
+ * @property {(message: object, reply: Reply|Reply[]) => (void|Promise<void>)}
+ *   [afterSubmitMessage] Fire-and-forget; a throw is caught and routed to onMessageError. Receives
+ *   whatever shape onSendMessage returned — an array in, an array out.
  *
  * -- other lifecycle (spec §6.6) — all optional, all fire-and-forget, all wrapped so a throw
  *    cannot break the UI --
@@ -58,10 +57,49 @@ import { safeInvoke } from './safe-invoke';
  * @property {(text: string) => (boolean|void)} [onSuggestionClick] Return false to prevent auto-submit.
  * @property {(feedback: {messageId: string, value: 'up'|'down'}) => void} [onFeedbackSubmit] Only
  *   fires when collectFeedback is on.
- * @property {(fields: {firstName: string, lastName: string, email: string, message: string}) => void}
- *   [onLeadSubmit] Only fires when collectLeads is on.
  * @property {(error: Error, message: object) => void} [onMessageError] Called after any lifecycle
  *   error has already been degraded visibly (error bubble rendered, composer unlocked, etc).
+ */
+
+/**
+ * What onSendMessage — and a form's onSubmit — may return.
+ *
+ * A bare string is shorthand for `{ text }`. An array renders one agent message
+ * per element. An async iterable streams chunks into a single bubble and so
+ * carries no form.
+ *
+ * @typedef {Reply|Reply[]|string|AsyncIterable<string|{text: string}>} SendResult
+ */
+
+/**
+ * One agent message.
+ *
+ * @typedef {Object} Reply
+ * @property {string} text Required.
+ * @property {string[]} [suggestions] Chips for the next turn. The chip row is
+ *   single, so across an array of replies the last non-empty set wins.
+ * @property {FormSpec} [form] A form rendered inside this message's bubble.
+ */
+
+/**
+ * A form attached to a reply. Every field maps to a native control, so
+ * validation is the browser's. There is no `password` type — see core/form-spec.js.
+ *
+ * @typedef {Object} FormSpec
+ * @property {string} [id] Identifies the form on submit; defaults to the message id.
+ * @property {string} [title] e.g. "Please share your name and email so we can follow up."
+ * @property {string} [submitLabel='Send']
+ * @property {Array<{name: string, label?: string,
+ *   type?: 'text'|'email'|'tel'|'url'|'number'|'textarea'|'select'|'checkbox',
+ *   placeholder?: string, required?: boolean,
+ *   options?: Array<{value: string, label?: string}>, value?: string|boolean}>} fields
+ *   An invalid field is dropped with a warning rather than costing the whole reply.
+ * @property {(values: Record<string, string|boolean>,
+ *   ctx: {formId: string, messageId: string, sessionId: string}) =>
+ *   (void|false|SendResult|Promise<void|false|SendResult>)} [onSubmit]
+ *   The form's own handler — there is no widget-level equivalent. Return false to leave the form
+ *   editable (a server-side rejection); return a reply to answer in the conversation. Any other
+ *   return locks the form so it cannot be submitted twice.
  */
 
 /**

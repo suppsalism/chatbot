@@ -9,6 +9,40 @@ change within a major version.
 
 ## [Unreleased]
 
+### Added
+
+- **A reply can carry a `form`**, rendered inside that message's bubble, so a widget can ask for
+  whatever it needs at the point in the conversation where it makes sense. Fields are described
+  declaratively (`name`, `label`, `type`, `required`, `options`, `placeholder`, `value`) alongside
+  an optional `title` and `submitLabel`, and every field maps to a native control — validation is
+  the browser's, so there is no validation engine here.
+
+  The handler lives on the form as `form.onSubmit(values, ctx)`, not at widget level: the code that
+  consumes the values sits next to the fields that produce them. It receives values keyed by field
+  name (checkboxes as booleans) and `ctx` of `{ formId, messageId, sessionId }`. Returning a reply
+  — or an array of them — answers in the conversation and locks the form; returning `false` leaves
+  it editable for a server-side rejection; anything else just locks it. Locking is what prevents a
+  double submission.
+
+  The descriptor is data, never markup. Nothing is ever passed to `innerHTML`, so a form described
+  by a backend or a model cannot inject script into the host page — which matters, because the
+  widget's iframe is same-origin and isolates CSS, not privilege. There is no `password` field
+  type for the same reason; an unknown type degrades to `text` with a warning.
+
+- **`onSendMessage` may return an array of replies**, rendering one agent message per element —
+  each with its own bubble, `messageId`, feedback pair, and conversation entry. Suggestion chips
+  are a single row, so across an array the last non-empty set wins. The single-object shape, the
+  bare-string shorthand, and streaming via async iterable are all unchanged; a streamed reply is
+  still one bubble and carries no form.
+
+### Removed
+
+- **`collectLeads`, `onLeadSubmit`, and the built-in lead form.** It hardcoded
+  `firstName / lastName / email / message` — the package deciding what a business wants to know
+  about its customers, which is business logic in a UI library — and it could only ever render as
+  a permanent form pinned below the composer, never contextually. `reply.form` replaces it with
+  strictly more capability. To reproduce the old form, describe those four fields on a reply.
+
 ### Fixed
 
 - **The reactive store was inert in every published bundle.** `notify()` snapshotted its subscriber

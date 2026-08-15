@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — reply forms</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+      li {
+        margin-bottom: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Reply forms</h1>
+    <p>
+      Any reply can carry a <code>form</code>, rendered inside that message's bubble, with its own
+      <code>onSubmit</code>. The bot below asks a qualifying question, then collects contact details
+      only once you say you want a follow-up.
+    </p>
+    <ul>
+      <li>Type <strong>anything</strong> → a plain reply with suggestion chips.</li>
+      <li>
+        Say <strong>"contact"</strong> (or tap the chip) → a lead form; submitting it locks it and
+        answers in the conversation.
+      </li>
+      <li>Say <strong>"plan"</strong> → a select + checkbox form.</li>
+      <li>
+        Say <strong>"reject"</strong> → a form whose handler returns <code>false</code>, so it stays
+        editable.
+      </li>
+      <li>Say <strong>"multi"</strong> → three separate bubbles from one turn.</li>
+    </ul>
+    <p>Submitted values go to the console. Nothing leaves the page — there is no network call.</p>
+
+    <div id="chat-root"></div>
+
+    <script type="module">
+      import { createChatbot } from '../dist/chatbot.modern.js';
+
+      const leadForm = {
+        id: 'lead',
+        title: 'Please share your name and email so we can follow up with you later.',
+        submitLabel: 'Send',
+        fields: [
+          { name: 'name', label: 'Name', required: true, placeholder: 'Ada Lovelace' },
+          { name: 'email', label: 'Email', type: 'email', required: true },
+          { name: 'note', label: 'Anything else?', type: 'textarea' },
+          { name: 'optIn', label: 'Email me product updates', type: 'checkbox' },
+        ],
+        onSubmit: async (values, ctx) => {
+          console.log('lead submitted', { values, ctx });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return { text: `Thanks ${values.name}! We'll be in touch at ${values.email}.` };
+        },
+      };
+
+      const planForm = {
+        id: 'plan',
+        title: 'Which plan are you on?',
+        submitLabel: 'Continue',
+        fields: [
+          {
+            name: 'plan',
+            label: 'Plan',
+            type: 'select',
+            options: [
+              'Free',
+              { value: 'pro', label: 'Pro' },
+              { value: 'ent', label: 'Enterprise' },
+            ],
+          },
+          { name: 'seats', label: 'Seats', type: 'number', value: '1' },
+          { name: 'trial', label: "I'm still on a trial", type: 'checkbox' },
+        ],
+        onSubmit: (values) => {
+          console.log('plan submitted', values);
+          // An array of replies renders as several bubbles.
+          return [
+            { text: `Noted: ${values.plan}, ${values.seats} seat(s).` },
+            { text: 'Anything else?' },
+          ];
+        },
+      };
+
+      const rejectingForm = {
+        id: 'reject',
+        title: 'This one always rejects, to show a server-side failure.',
+        fields: [{ name: 'code', label: 'Discount code', required: true }],
+        onSubmit: async (values) => {
+          console.log('rejecting', values);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          return false; // form stays editable
+        },
+      };
+
+      createChatbot({
+        mount: document.querySelector('#chat-root'),
+        name: 'Sales',
+        brandColor: '#0f766e',
+        autoOpen: true,
+        collectFeedback: true,
+        initialMessages: ['Hi! Ask me anything, or say "contact" to leave your details.'],
+        suggestedMessages: ['contact', 'plan', 'multi'],
+
+        onSendMessage: async (message) => {
+          const text = message.text.toLowerCase();
+          await new Promise((resolve) => setTimeout(resolve, 400));
+
+          if (text.includes('contact')) {
+            return { text: 'Happy to help! Mind sharing where to reach you?', form: leadForm };
+          }
+          if (text.includes('plan')) {
+            return { text: 'Let me check your account.', form: planForm };
+          }
+          if (text.includes('reject')) {
+            return { text: 'Go ahead:', form: rejectingForm };
+          }
+          if (text.includes('multi')) {
+            return [
+              { text: 'Got it.' },
+              { text: "Here's what I found — three separate bubbles from one turn." },
+              { text: 'Anything else?', suggestions: ['contact', 'plan'] },
+            ];
+          }
+
+          return {
+            text: `You said: "${message.text}"`,
+            suggestions: ['contact', 'plan', 'multi'],
+          };
+        },
+
+        onFeedbackSubmit: (feedback) => console.log('feedback', feedback),
+        onMessageError: (error) => console.error('chat error', error),
+      });
+    </script>
+  </body>
+</html>

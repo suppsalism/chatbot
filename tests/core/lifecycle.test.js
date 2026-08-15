@@ -126,7 +126,7 @@ describe('submitMessage — happy path', () => {
     expect(view.appendMessage).toHaveBeenLastCalledWith(
       expect.objectContaining({ text: 'Which plan?' })
     );
-    expect(view.setSuggestions).toHaveBeenCalledWith(['Free', 'Pro'], undefined);
+    expect(view.setSuggestions).toHaveBeenCalledWith(['Free', 'Pro']);
   });
 
   it('leaves existing suggestions alone when a reply carries none', async () => {

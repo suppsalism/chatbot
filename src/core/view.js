@@ -5,10 +5,10 @@ import { MessageWrapper } from '../components/message-wrapper';
 import { SuggestionWrapper } from '../components/suggestion-wrapper';
 import { Composer } from '../components/composer';
 import { Signature } from '../components/signature';
-import { LeadForm } from '../components/lead-form';
 
-import { submitMessage } from './lifecycle';
-import { safeInvoke } from './safe-invoke';
+import { submitMessage, renderResult } from './lifecycle';
+import { normalizeFormSpec } from './form-spec';
+import { safeInvoke, reportError } from './safe-invoke';
 
 /**
  * Builds the component tree inside the iframe document and returns the `view`
@@ -63,15 +63,6 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
   });
   wrapper.content.appendChild(composer.element);
 
-  let leadForm = null;
-  if (getConfig().collectLeads) {
-    leadForm = new LeadForm({
-      doc,
-      onSubmit: (fields) => safeInvoke(callbacks.onLeadSubmit, callbacks, fields),
-    });
-    wrapper.content.appendChild(leadForm.element);
-  }
-
   let signature = null;
   if (getConfig().signature) {
     signature = new Signature({ doc });
@@ -97,13 +88,66 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
     submitMessage({ text, config: getConfig(), view, state, callbacks });
   }
 
+  /**
+   * Runs a form's own onSubmit and translates what it returned into the one
+   * thing the Form component needs to know — whether to close:
+   *
+   *   false          → leave the form editable, so the consumer can reject it
+   *   a reply/replies → rendered as new agent messages, then the form locks
+   *   anything else  → the form just locks
+   *
+   * Locking is what stops the same lead being submitted twice. A returned reply
+   * may itself carry a form, which is what makes multi-step flows work: the
+   * rendering path is the same one onSendMessage uses, so it composes with no
+   * special case here.
+   *
+   * @returns {Promise<boolean>} true when the form should lock.
+   */
+  async function runFormSubmit(spec, messageId, values) {
+    const context = {
+      formId: spec.id,
+      messageId,
+      sessionId: getConfig().sessionId,
+    };
+
+    let result;
+    try {
+      result = await spec.onSubmit(values, context);
+    } catch (error) {
+      reportError(callbacks, error);
+      return false;
+    }
+
+    if (result === false) return false;
+
+    if (result !== undefined && result !== null) {
+      try {
+        await renderResult(result, { view, state });
+      } catch (error) {
+        reportError(callbacks, error);
+      }
+    }
+
+    return true;
+  }
+
   getConfig().suggestedMessages.forEach((text) => {
     suggestionWrapper.addSuggestion({ text, onClick: handleSuggestionClick });
   });
 
   const view = {
-    appendMessage({ role, text, messageId }) {
+    appendMessage({ role, text, messageId, form }) {
       const config = getConfig();
+      const spec = role === 'agent' ? normalizeFormSpec(form, { messageId }) : null;
+
+      // The component gets one `form` object and nothing else. The consumer's
+      // handler is swapped for the wired one in the same slot, so there is never
+      // a live handler and a dead one in scope at the same time.
+      const wired =
+        spec && spec.onSubmit
+          ? { ...spec, onSubmit: (values) => runFormSubmit(spec, messageId, values) }
+          : (spec ?? undefined);
+
       return messageWrapper.appendMessage({
         role,
         text,
@@ -111,6 +155,7 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         avatar: role === 'agent' ? config.avatar : undefined,
         brandColor: config.brandColor,
         onFeedback: role === 'agent' && config.collectFeedback ? handleFeedback : undefined,
+        form: wired,
       });
     },
 
@@ -170,22 +215,10 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         signature.destroy();
         signature = null;
       }
-
-      if (config.collectLeads && !leadForm) {
-        leadForm = new LeadForm({
-          doc,
-          onSubmit: (fields) => safeInvoke(callbacks.onLeadSubmit, callbacks, fields),
-        });
-        wrapper.content.appendChild(leadForm.element);
-      } else if (!config.collectLeads && leadForm) {
-        leadForm.destroy();
-        leadForm = null;
-      }
     },
 
     destroy() {
       launcher.destroy();
-      leadForm?.destroy();
       signature?.destroy();
       composer.destroy();
       suggestionWrapper.destroy();

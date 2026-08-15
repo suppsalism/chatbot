@@ -55,7 +55,7 @@ export class MessageWrapper {
   }
 
   /** Appends a bubble and returns the Message instance (its setText() drives streaming). */
-  appendMessage({ role, text, avatar, brandColor, error, messageId, onFeedback }) {
+  appendMessage({ role, text, avatar, brandColor, error, messageId, onFeedback, form }) {
     const message = new Message({
       doc: this.doc,
       role,
@@ -65,6 +65,7 @@ export class MessageWrapper {
       error,
       messageId,
       onFeedback,
+      form,
     });
     this.children.push(message);
     this.container.appendChild(message.element);

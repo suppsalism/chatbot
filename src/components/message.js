@@ -1,6 +1,7 @@
 import { getTextColorForBackground } from '../utils/color';
 import { CLASS } from '../constants/class-names';
 import { Feedback } from './feedback';
+import { Form } from './form';
 
 export class Message {
   constructor({
@@ -12,6 +13,7 @@ export class Message {
     error = false,
     messageId,
     onFeedback,
+    form, // normalized spec, its onSubmit already wired by core/view
   }) {
     this.doc = doc;
     this.role = role;
@@ -20,7 +22,10 @@ export class Message {
     this.error = error;
     this.messageId = messageId;
     this.onFeedback = onFeedback;
+    this.formSpec = form;
     this.children = [];
+    // Kept as a field because setFeedbackDisabled() reaches for it later; the
+    // Form needs no such handle, so it lives only in `children` for teardown.
     this.feedback = null;
 
     this.build(text);
@@ -64,6 +69,14 @@ export class Message {
     const textSpan = this.doc.createElement('span');
     textSpan.textContent = text;
     bubble.appendChild(textSpan);
+
+    // A form belongs to the bubble it arrived with, so it sits inside the
+    // message rather than in a shared region of the panel.
+    if (this.formSpec) {
+      const form = new Form({ doc: this.doc, spec: this.formSpec });
+      this.children.push(form);
+      container.appendChild(form.element);
+    }
 
     if (this.onFeedback) {
       const feedback = new Feedback({
