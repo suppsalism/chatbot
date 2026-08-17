@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — ESM + streaming</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ESM + streaming</h1>
+    <p>
+      <code>createChatbot()</code> called directly, mounted into a container this page owns, with an
+      <code>onSendMessage</code> that returns an async generator — each chunk streams into a single
+      bubble. All three lifecycle stages are wired up; watch the console.
+    </p>
+    <p>Note there is still no network call: the "stream" is generated locally.</p>
+
+    <div id="chat-root"></div>
+
+    <script type="module">
+      import { createChatbot } from '../dist/chatbot.modern.js';
+
+      const REPLY = 'Streaming a reply one word at a time, straight into a single bubble. ';
+
+      const bot = createChatbot({
+        mount: document.querySelector('#chat-root'),
+        name: 'Streamer',
+        brandColor: '#0f766e',
+        autoOpen: true,
+        collectFeedback: true,
+
+        beforeSubmitMessage: (draft) => {
+          if (draft.text.length > 2000) return false; // cancelled — nothing renders
+          return { ...draft, text: draft.text.trim() };
+        },
+
+        onSendMessage: async function* (message) {
+          for (const word of `${REPLY}You asked: "${message.text}"`.split(' ')) {
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            yield `${word} `;
+          }
+        },
+
+        afterSubmitMessage: (message, reply) => {
+          console.log('persist', { id: message.messageId, text: reply.text });
+        },
+
+        onMessageError: (error) => console.error('chat error', error),
+      });
+
+      // Always destroy an instance you created yourself — on an SPA route change,
+      // or here, on unload.
+      window.addEventListener('beforeunload', () => bot.destroy());
+    </script>
+  </body>
+</html>

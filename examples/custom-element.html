@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — &lt;ss-chat&gt; custom element</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+      button {
+        margin-right: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>&lt;ss-chat&gt;</h1>
+    <p>
+      <code>defineChatElement()</code> is called once. Everything after that is driven by the DOM:
+      the tags below boot themselves, per-tag <code>data-*</code> attributes override the shared
+      defaults, editing an attribute live calls <code>updateConfig()</code>, and removing a tag
+      calls <code>destroy()</code>.
+    </p>
+
+    <button id="toggle-theme">Toggle first widget's theme</button>
+    <button id="add">Add a third widget</button>
+    <button id="remove">Remove it</button>
+
+    <!-- shared default: name "Assistant" -->
+    <ss-chat id="first" data-orientation="right"></ss-chat>
+    <!-- its own attribute wins over the shared default -->
+    <ss-chat data-name="Sales" data-theme="dark" data-orientation="left"></ss-chat>
+
+    <script type="module">
+      import { defineChatElement } from '../dist/chatbot.modern.js';
+
+      defineChatElement({
+        name: 'Assistant',
+        signature: false,
+        onSendMessage: async (message, { history }) => {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          return `Turn ${history.length}: you said "${message.text}"`;
+        },
+        onOpen: () => console.log('opened'),
+      });
+
+      const first = document.querySelector('#first');
+
+      document.querySelector('#toggle-theme').addEventListener('click', () => {
+        const next = first.dataset.theme === 'dark' ? 'light' : 'dark';
+        first.dataset.theme = next; // attributeChangedCallback -> updateConfig
+      });
+
+      let extra = null;
+      document.querySelector('#add').addEventListener('click', () => {
+        if (extra) return;
+        extra = document.createElement('ss-chat');
+        extra.dataset.name = 'Added later';
+        // Boots automatically the instant it is connected.
+        document.body.appendChild(extra);
+      });
+
+      document.querySelector('#remove').addEventListener('click', () => {
+        extra?.remove(); // disconnectedCallback -> destroy()
+        extra = null;
+      });
+
+      first.addEventListener('ss-chat:ready', (event) => {
+        console.log('ready', event.detail.bot.id);
+      });
+    </script>
+  </body>
+</html>

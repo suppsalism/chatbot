@@ -1,0 +1,47 @@
+name: Feature request
+description: Suggest a capability for the widget
+labels: [enhancement]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This package is deliberately UI and state only — it makes no network calls, and no API
+        keys, endpoints, or base URLs belong in its config. Anything that needs to talk to a
+        server belongs in your own `onSendMessage`. Requests that would cross that line will be
+        closed, so it is worth checking against it first.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: The situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would the API look like?
+      description: A config field, a callback, an instance method?
+      render: js
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which part of the surface would this touch?
+      options:
+        - A config field (serializable — has a data-* equivalent)
+        - An option (a function or DOM node — JS only)
+        - A lifecycle callback
+        - An instance method
+        - Styling / theming
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Can you achieve it today with the existing callbacks?
+      description: If so, what makes that unworkable?
