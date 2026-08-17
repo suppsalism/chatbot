@@ -182,8 +182,14 @@ npm version patch|minor|major
 git push --follow-tags
 ```
 
-Pushing the tag triggers `.github/workflows/release.yml`, which re-runs every gate, verifies the
-tag matches `package.json`, and publishes to npm with provenance. It needs an `NPM_TOKEN` secret.
+Pushing the tag triggers `.github/workflows/publish.yml`, which re-runs every gate, verifies the
+tag matches `package.json`, and publishes to npm. Merge any workflow change _before_ tagging — the
+run uses the commit the tag points at.
+
+**There is no npm token, and there must not be one.** Publishing is tokenless via npm's trusted
+publishing, which is bound to this repository _and the `publish.yml` filename_ — so moving or
+renaming that workflow breaks publishing until the trusted publisher is reconfigured on npmjs.com.
+Its remaining requirements are commented in the file itself.
 
 ## Code of conduct
 
