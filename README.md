@@ -34,7 +34,7 @@ reply — this package builds the widget, renders it, and runs every interaction
   ]);
 </script>
 <script
-  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@0.1/dist/chatbot.umd.js"
+  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@1/dist/chatbot.umd.js"
   defer
 ></script>
 
@@ -754,9 +754,10 @@ The bundle warns and no-ops rather than clobbering an existing global. Check
 CMS plugin.
 
 **Which version am I running?**
-`SsChat.version`. Always pin in the CDN URL, never `@latest`. While the package
-is pre-1.0, pin the minor (`@0.1`) — under semver a `0.x` minor bump is allowed
-to break, so `@0` is not a safe range. Once 1.0 ships, `@1` becomes the right pin.
+`SsChat.version`. Always pin a major (`@1`) in the CDN URL, never `@latest`. A
+major pin picks up fixes and new features automatically, and the public surface
+— config fields, callbacks, payload shapes, the instance API — cannot change
+under you within it.
 
 **Does it retry a failed send?**
 No. Retries, backoff, and timeouts belong in your `onSendMessage`.

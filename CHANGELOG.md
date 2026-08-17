@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The publi
 config fields, the callbacks, the lifecycle payload shapes, and the instance API — none of them
 change within a major version.
 
+## [v1.0.1] - 2026-08-18
+
+### Changed
+
+- Publishing is now tokenless. `release.yml` became `publish.yml` — npm's trusted publishing binds
+  to a specific workflow filename, and that is the one registered — and the `NODE_AUTH_TOKEN` /
+  `NPM_TOKEN` pair is gone in favour of a short-lived OIDC token GitHub mints per run. Nothing
+  long-lived is stored in repository secrets any more. No effect on the published package.
+
 ## [v1.0.0] - 2026-08-17
 
 ### Added
@@ -105,7 +114,10 @@ entry points resolve to the same surface as before.
 
 - `.npmignore`, which was redundant with and overridden by `files: ["dist"]`.
 
-## [0.1.0]
+## 0.1.0 — never published
 
-Initial package: `createChatbot`, `defineChatElement` / `<ss-chat>`, the schema-driven config
-system, the signal store, and the iframe-isolated widget.
+Listed for context only; this version does not exist on npm, which is why the 1.0.0 entries above
+read as changes rather than as an initial release.
+
+The package as it stood before 1.0.0: `createChatbot`, `defineChatElement` / `<ss-chat>`, the
+schema-driven config system, the signal store, and the iframe-isolated widget.
