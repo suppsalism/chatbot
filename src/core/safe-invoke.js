@@ -1,12 +1,12 @@
 /**
  * Routes an error to the consumer's observer without ever letting the observer
- * itself break the chat (spec §6.7).
+ * itself break the chat.
  */
 export function reportError(callbacks, error, message) {
   try {
     callbacks.onMessageError?.(error, message);
   } catch {
-    // an observer is never allowed to break the chat (spec §6.7)
+    // an observer is never allowed to break the chat
   }
 }
 

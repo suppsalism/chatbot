@@ -1,8 +1,8 @@
 /**
- * CONFIG_SCHEMA — the single source of truth (spec §4.1, §4.4). One row per
+ * CONFIG_SCHEMA — the single source of truth. One row per
  * field. Defaults, the attribute parser, validation, and the documented
  * options table are all derived from this table. Adding an option means
- * adding one row here and nowhere else (guide §4).
+ * adding one row here and nowhere else.
  */
 export const CONFIG_SCHEMA = [
   {
@@ -83,7 +83,7 @@ export const CONFIG_SCHEMA = [
     validate: (v) => typeof v === 'boolean',
   },
   {
-    // The one field core generates for itself (spec §4.3) — resolveConfig
+    // The one field core generates for itself — resolveConfig
     // stamps a UUID here when no layer supplies one.
     key: 'sessionId',
     attribute: 'data-session',

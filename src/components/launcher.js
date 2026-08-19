@@ -1,4 +1,4 @@
-// Exception to "components are styled by widget.css" (guide §2.3): this one
+// Exception to "components are styled by widget.css": this one
 // renders into the host page — via the shell container, not document.body —
 // because it must stay visible while the panel is collapsed. Its color comes
 // from the --ss-brand custom property set on the shell container it lives

@@ -74,7 +74,7 @@ function normalizeField(field) {
 /**
  * A reply's `form` → a validated spec, or null if there is nothing renderable.
  *
- * Degrades the way config does (spec §4.3): a bad field is dropped with one
+ * Degrades the way config does: a bad field is dropped with one
  * warning and the rest of the form still renders, rather than throwing and
  * costing the consumer the whole reply.
  *

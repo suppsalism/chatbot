@@ -57,7 +57,6 @@ src/
 tests/                  Vitest + jsdom, mirroring src/
 examples/               runnable pages, loaded from dist/
 scripts/                maintainer automation — never run by consumers
-docs/                   the specification and implementation guide
 assets/                 README images (not shipped in the package)
 ```
 

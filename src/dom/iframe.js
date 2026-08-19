@@ -14,7 +14,7 @@ function themeClass(theme) {
 }
 
 /**
- * Creates the iframe and prepares its document (spec §10.2 step 4). A
+ * Creates the iframe and prepares its document. A
  * same-origin iframe's initial document exists synchronously once attached
  * to the DOM — no network is involved, so nothing here can fail on a slow
  * connection.

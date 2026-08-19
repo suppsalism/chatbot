@@ -16,13 +16,13 @@ import { safeInvoke } from './safe-invoke';
 /**
  * @typedef {Object} CreateChatbotOptions
  *
- * -- options (spec §5.1) --
+ * -- options --
  * @property {Element} [mount=document.body] Must be an attached Element (throws synchronously
  *   otherwise). Decides ownership, not layout — everything created is a descendant of it, and
  *   destroy() tears it down.
  * @property {string} [instanceId] Internal instance id; auto-generated when omitted.
  *
- * -- configuration (spec §4.4) — every field is optional, invalid values fall back to their
+ * -- configuration — every field is optional, invalid values fall back to their
  *    default with a console warning rather than throwing --
  * @property {'light'|'dark'} [theme='light'] Sets body.theme-{theme} inside the iframe.
  * @property {'left'|'right'} [orientation='right'] Launcher and panel side.
@@ -37,7 +37,7 @@ import { safeInvoke } from './safe-invoke';
  * @property {boolean} [collectFeedback=false] Show thumbs up/down on agent messages.
  * @property {string} [sessionId] Stamped on every lifecycle payload; a UUID is generated when omitted.
  *
- * -- message lifecycle (spec §6) --
+ * -- message lifecycle --
  * @property {(draft: {text: string, messageId: string, sessionId: string, timestamp: number}) =>
  *   (object|false|Promise<object|false>)} [beforeSubmitMessage] Transform or cancel (return false)
  *   before the user bubble renders.
@@ -48,13 +48,18 @@ import { safeInvoke } from './safe-invoke';
  * @property {(message: object, reply: Reply|Reply[]) => (void|Promise<void>)}
  *   [afterSubmitMessage] Fire-and-forget; a throw is caught and routed to onMessageError. Receives
  *   whatever shape onSendMessage returned — an array in, an array out.
+ * @property {(message: {text: string, messageId: string, sessionId: string, timestamp: number},
+ *   ctx: {history: object[], config: object}) =>
+ *   (SendResult|false|void|Promise<SendResult|false|void>)} [onSendSuggestion] Answers a
+ *   suggestion chip in place of onSendMessage — same arguments, same return shapes, same error
+ *   handling. Return nothing to hand the chip to onSendMessage after all, or `false` synchronously
+ *   to cancel the turn before anything renders.
  *
- * -- other lifecycle (spec §6.6) — all optional, all fire-and-forget, all wrapped so a throw
+ * -- other lifecycle — all optional, all fire-and-forget, all wrapped so a throw
  *    cannot break the UI --
  * @property {(bot: ChatbotInstance) => void} [onReady] Widget mounted and interactive.
  * @property {() => void} [onOpen] Panel opened.
  * @property {() => void} [onClose] Panel closed.
- * @property {(text: string) => (boolean|void)} [onSuggestionClick] Return false to prevent auto-submit.
  * @property {(feedback: {messageId: string, value: 'up'|'down'}) => void} [onFeedbackSubmit] Only
  *   fires when collectFeedback is on.
  * @property {(error: Error, message: object) => void} [onMessageError] Called after any lifecycle
@@ -115,7 +120,7 @@ import { safeInvoke } from './safe-invoke';
  */
 
 /**
- * Wires config → state → mount → view → instance API (guide §2.1). This file
+ * Wires config → state → mount → view → instance API. This file
  * creates no DOM of its own: every node comes from ../dom or ./view.
  *
  * @param {CreateChatbotOptions} [options]

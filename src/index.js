@@ -1,4 +1,4 @@
-// npm entry — named exports only, zero side effects on import (guide §2.1).
+// npm entry — named exports only, zero side effects on import.
 export { createChatbot } from './core/create-chatbot';
 export { defineChatElement } from './core/define-element';
 export { parseAttributes } from './config/parse-attributes';

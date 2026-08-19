@@ -7,7 +7,7 @@ import { CHAT_TAG_NAME, CHAT_READY_EVENT } from '../constants/dom';
 
 /**
  * Registers the <ss-chat> custom element. A real registration rather than a
- * one-time tag scan (spec §11): tags added later by an SPA framework boot
+ * one-time tag scan: tags added later by an SPA framework boot
  * automatically, DOM removal triggers destroy(), and live attribute edits
  * become updateConfig() calls.
  *

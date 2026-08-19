@@ -82,10 +82,12 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
     }
   }
 
+  // Chips run the same lifecycle as a typed message; `source` is what lets
+  // stage 2 pick onSendSuggestion over onSendMessage. The choice lives in
+  // lifecycle.js because it has to sit between beforeSubmitMessage and the
+  // first render, which is not something the view can see.
   function handleSuggestionClick(text) {
-    const allow = safeInvoke(callbacks.onSuggestionClick, callbacks, text);
-    if (allow === false) return;
-    submitMessage({ text, config: getConfig(), view, state, callbacks });
+    submitMessage({ text, source: 'suggestion', config: getConfig(), view, state, callbacks });
   }
 
   /**

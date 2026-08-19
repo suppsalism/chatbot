@@ -1,6 +1,6 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/** Builds a single-path SVG icon via createElementNS — no innerHTML (guide §3.5). */
+/** Builds a single-path SVG icon via createElementNS — no innerHTML. */
 export function createIcon(doc, { path, size = 20 }) {
   const svg = doc.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');

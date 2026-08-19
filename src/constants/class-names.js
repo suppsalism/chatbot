@@ -1,6 +1,6 @@
 /**
  * Single source of truth for every class name the widget writes. No other
- * module may write a DOM class literal (guide §3.6).
+ * module may write a DOM class literal.
  */
 export const CLASS = {
   // shell (host page)

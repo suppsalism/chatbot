@@ -43,6 +43,14 @@
       </li>
       <li>Say <strong>"multi"</strong> → three separate bubbles from one turn.</li>
     </ul>
+    <p>
+      The chips take a different route from typed text: <code>onSendSuggestion</code> answers
+      <strong>contact</strong> and <strong>plan</strong> without ever reaching
+      <code>onSendMessage</code>. It still awaits — a chip whose answer depends on the user may well
+      need an API call — which is why it is written <code>async</code> here.
+      <strong>multi</strong> is left unhandled on purpose, so it falls through and
+      <code>onSendMessage</code> answers it instead.
+    </p>
     <p>Submitted values go to the console. Nothing leaves the page — there is no network call.</p>
 
     <div id="chat-root"></div>
@@ -114,6 +122,18 @@
         collectFeedback: true,
         initialMessages: ['Hi! Ask me anything, or say "contact" to leave your details.'],
         suggestedMessages: ['contact', 'plan', 'multi'],
+
+        onSendSuggestion: async (message) => {
+          console.log('chip clicked', message.text);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+
+          if (message.text === 'contact') {
+            return { text: 'Sure — where can we reach you?', form: leadForm };
+          }
+          if (message.text === 'plan') {
+            return { text: 'Which plan are you on?', form: planForm };
+          }
+        },
 
         onSendMessage: async (message) => {
           const text = message.text.toLowerCase();

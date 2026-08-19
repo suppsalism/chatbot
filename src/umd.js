@@ -1,8 +1,8 @@
-// The only file in the package permitted to touch `window` (guide §2.1, §3.1).
+// The only file in the package permitted to touch `window`.
 import * as api from './index.js';
 import { version } from '../package.json';
 
-// Wrapped only on the CDN global, so `SsChat.get(id)` (§17.1) has something
+// Wrapped only on the CDN global, so `SsChat.get(id)` has something
 // to search — the npm export of createChatbot stays untouched.
 function createTrackedChatbot(options) {
   const bot = api.createChatbot(options);
@@ -18,7 +18,7 @@ function drainQueue(pending) {
 }
 
 if (window.SsChat) {
-  // Guard double-load: warn and no-op rather than clobber (spec §17.1) — this
+  // Guard double-load: warn and no-op rather than clobber — this
   // happens for real when a customer's site has two plugins that each embed
   // the widget.
   if (window.SsChat.version !== version) {

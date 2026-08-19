@@ -37,7 +37,7 @@ export class SuggestionWrapper {
     this.content.appendChild(suggestion.element);
   }
 
-  /** Replaces the whole chip row — used when a reply carries new suggestions (spec §6.2). */
+  /** Replaces the whole chip row — used when a reply carries new suggestions. */
   setSuggestions(list, onClick) {
     this.children.forEach((child) => child.destroy());
     this.children = [];

@@ -1,7 +1,7 @@
 import { createSignal, createEffect } from '../reactive/signal';
 import { generateUuid } from '../utils/uuid';
 
-/** The four signals the widget owns (spec §8.1). */
+/** The four signals the widget owns. */
 export function initState(config) {
   const [message, setMessage] = createSignal('');
   const [disabledSubmit, setDisabledSubmit] = createSignal(false);
@@ -31,7 +31,7 @@ export function initState(config) {
   };
 }
 
-/** The two DOM effects bound outside any single component (guide §2). */
+/** The two DOM effects bound outside any single component. */
 export function bindEffects({ state, shell, view }) {
   createEffect(() => shell.setVisible(state.chatVisible()));
   createEffect(() => view.setSubmitDisabled(state.disabledSubmit()));
