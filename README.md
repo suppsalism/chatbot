@@ -34,7 +34,7 @@ reply — this package builds the widget, renders it, and runs every interaction
   ]);
 </script>
 <script
-  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@1/dist/chatbot.umd.js"
+  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@2/dist/chatbot.umd.js"
   defer
 ></script>
 
@@ -215,7 +215,7 @@ yet.
 | `avatar` · `data-avatar`                        | url                 | —                   | Image shown in the header and next to every agent message                                                               |
 | `placeholder` · `data-placeholder`              | `string`            | `'Type a message…'` | Placeholder text in the empty composer                                                                                  |
 | `initialMessages` · `data-initial-messages`     | `string[]` (JSON)   | `[]`                | Messages rendered before any interaction — e.g. a greeting                                                              |
-| `suggestedMessages` · `data-suggested-messages` | `string[]` (JSON)   | `[]`                | Suggestion chips above the composer; tapping one auto-submits it                                                        |
+| `suggestedMessages` · `data-suggested-messages` | `string[]` (JSON)   | `[]`                | Suggestion chips above the composer; tapping one submits it, via `onSendSuggestion` if set                              |
 | `signature` · `data-signature`                  | `boolean`           | `true`              | Shows or hides the footer credit                                                                                        |
 | `autoOpen` · `data-auto-open`                   | `boolean`           | `false`             | Opens the panel as soon as the widget mounts                                                                            |
 | `collectFeedback` · `data-collect-feedback`     | `boolean`           | `false`             | Thumbs up/down under every agent message. Pair with [`onFeedbackSubmit`](#callbacks)                                    |
@@ -245,6 +245,7 @@ user submits
       ├─► render user bubble, lock composer, show typing indicator
       │
       ├─► onSendMessage(message, ctx) ───► reply | AsyncIterable<chunk>
+      │        a suggestion chip goes to onSendSuggestion instead, when one is set
       │        throw → error bubble rendered, onMessageError called
       │
       ├─► render reply, hide typing, unlock composer
@@ -490,6 +491,38 @@ onSendMessage: async (message) => {
 **This package never retries a failed send.** Retries, backoff, and timeouts
 belong here, since only you know which failures are safe to repeat.
 
+### `onSendSuggestion`
+
+Optional, and identical to `onSendMessage` in every respect — same arguments,
+same return shapes, same error handling. The only difference is which turns
+reach it: **when it is set, a suggestion chip goes here instead of
+`onSendMessage`.** Anything typed, and anything from `bot.submit()`, still goes
+to `onSendMessage`.
+
+A chip is a question you wrote, so you already know which answer it wants. That
+usually means answering it directly instead of sending it through a model — but
+the handler is `async` like any other, so nothing stops you calling an API first
+when the answer depends on the user:
+
+```js
+suggestedMessages: ['Pricing', 'Book a demo'],
+
+onSendSuggestion: (message, ctx) => {
+  if (message.text === 'Pricing') {
+    return { text: 'Plans start at $9/mo.', suggestions: ['Book a demo'] };
+  }
+  if (message.text === 'Book a demo') {
+    return { text: 'Sure — when suits you?', form: bookingForm };
+  }
+  // anything else: return nothing, and the chip falls through to onSendMessage
+},
+```
+
+Returning nothing hands that chip to `onSendMessage` after all, so handling one
+chip never obliges you to handle them all. Returning `false` **synchronously**
+cancels the turn outright — nothing renders at all — which is the escape hatch
+for a chip that opens a modal or navigates rather than saying something.
+
 ### `afterSubmitMessage`
 
 Optional. Fires once the reply is fully rendered — for a streamed reply, after
@@ -514,7 +547,6 @@ callbacks above, these are JS-only and have no attribute equivalent.
 onReady?:            (bot: ChatbotInstance) => void;
 onOpen?:             () => void;
 onClose?:            () => void;
-onSuggestionClick?:  (text: string) => boolean | void;
 onFeedbackSubmit?:   (feedback: { messageId: string; value: 'up' | 'down' }) => void;
 onMessageError?:     (error: Error, message: Message) => void;
 ```
@@ -523,7 +555,6 @@ onMessageError?:     (error: Error, message: Message) => void;
 | -------------------- | --------------------------------------------------------------- | ------------------------------------------------------ |
 | `onReady`            | The widget has mounted and is interactive                       | Once per instance                                      |
 | `onOpen` / `onClose` | The panel opens or closes                                       | However triggered — a launcher click or `bot.open()`   |
-| `onSuggestionClick`  | A suggestion chip is clicked                                    | Return `false` to prevent it from auto-submitting      |
 | `onFeedbackSubmit`   | Thumbs up/down is clicked                                       | Only when `collectFeedback` is on                      |
 | `onMessageError`     | Any lifecycle error, after it has already been degraded visibly | One place to observe every failure — logging, alerting |
 
@@ -754,7 +785,7 @@ The bundle warns and no-ops rather than clobbering an existing global. Check
 CMS plugin.
 
 **Which version am I running?**
-`SsChat.version`. Always pin a major (`@1`) in the CDN URL, never `@latest`. A
+`SsChat.version`. Always pin a major (`@2`) in the CDN URL, never `@latest`. A
 major pin picks up fixes and new features automatically, and the public surface
 — config fields, callbacks, payload shapes, the instance API — cannot change
 under you within it.

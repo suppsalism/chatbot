@@ -1,6 +1,6 @@
 /**
  * Single source of truth for the tag name, the events, and every DOM id the
- * widget generates. No other module may write these literals (guide §3.6).
+ * widget generates. No other module may write these literals.
  * Class names live in ./class-names.js.
  */
 

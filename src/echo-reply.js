@@ -1,6 +1,6 @@
 /**
  * A trivial onSendMessage so demos, docs, and tests are not blocked by the
- * requirement that one be supplied (spec §6.2).
+ * requirement that one be supplied.
  *
  * This is public API, not an internal helper — it is exported from the package
  * root and documented in the README.

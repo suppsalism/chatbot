@@ -9,7 +9,7 @@ function orientationClass(orientation) {
 
 /**
  * Host-page container + launcher slot. Everything created here is a
- * descendant of `mount`, which is what makes destroy() correct (spec §5.1).
+ * descendant of `mount`, which is what makes destroy() correct.
  */
 export function mountShell({ mount, instanceId, config }) {
   const doc = mount.ownerDocument;

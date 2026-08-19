@@ -1,7 +1,7 @@
 import { CONFIG_SCHEMA } from './schema';
 import { parseTypedValue } from '../utils/coerce';
 
-/** DOM element → partial config, coerced per CONFIG_SCHEMA (spec §4.2). */
+/** DOM element → partial config, coerced per CONFIG_SCHEMA. */
 export function parseAttributes(element) {
   const config = {};
 

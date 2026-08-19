@@ -14,9 +14,9 @@ function stripNullish(layer) {
 }
 
 /**
- * Merges partial configs, lowest precedence first, over the schema defaults
- * (spec §4.3). Never throws — a bad or unrecognized field degrades instead
- * of blanking the widget.
+ * Merges partial configs, lowest precedence first, over the schema defaults.
+ * Never throws — a bad or unrecognized field degrades instead of blanking the
+ * widget.
  */
 export function resolveConfig(layers = []) {
   const defaults = {};

@@ -7,6 +7,47 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The publi
 config fields, the callbacks, the lifecycle payload shapes, and the instance API — none of them
 change within a major version.
 
+## [v2.0.0] - 2026-08-19
+
+### Changed
+
+- **`onSuggestionClick` is now `onSendSuggestion`, and it answers the chip rather than merely
+  observing it.** When it is set, a suggestion chip is routed to it in place of `onSendMessage` —
+  same arguments, same return shapes, same error handling. Typed messages and `bot.submit()` are
+  unaffected and still go to `onSendMessage`.
+
+  A chip is a question you wrote, so you already know which answer it wants. Previously answering
+  one meant an `if` at the top of `onSendMessage` re-deriving which chip had been clicked; now that
+  dispatch happens once, in the package. Answering directly is the common case, but the handler is
+  `async` like any other, so a chip whose answer depends on the user can still call an API first.
+
+  Returning nothing hands that chip to `onSendMessage` after all, so handling one chip does not
+  oblige you to handle them all — including chips that arrive later inside a reply's `suggestions`.
+  Returning `false` synchronously still cancels the turn outright.
+
+  **Migrating.** Rename the key, and read `message.text` where you read `text`: the signature was
+  `(text: string)` and is now `(message, ctx)` — the same pair `onSendMessage` receives, since the
+  two are now interchangeable. `ctx.history` already includes the chip's own message, matching
+  `onSendMessage`. Returning `false` is unchanged and `true` still means "go ahead", so the old
+  boolean contract keeps working once renamed. An `onSuggestionClick` key left in place is reported
+  by the usual unknown-option warning and ignored.
+
+  Two smaller consequences: the callback now runs _after_ `beforeSubmitMessage` rather than before
+  it, so a cancelled turn no longer fires it; and a throw is now degraded like a failed reply — an
+  error bubble plus `onMessageError` — rather than being swallowed. It does not fall through, since
+  a handler that failed is not a handler that declined.
+
+### Removed
+
+- **The `docs/` folder.** Its four files documented the package as it was being designed, and had
+  drifted well past that: `CONTRACT.md` specified a `transport` port and a plugin contract that
+  were never built, `STRUCTURE_FLOW.md` described the pre-1.0.0 `src/lib/` layout, and the spec
+  still listed `collectLeads`. The README is the consumer contract and `CONTRIBUTING.md` is the
+  contributor one; a third, stale account of the same package was worse than none. The `spec §x` /
+  `guide §x` citations that referenced them have been removed from the source comments — the
+  explanation each comment carries stayed, only the dangling pointer went. Nothing published
+  changes: `docs/` was never in the tarball.
+
 ## [v1.0.1] - 2026-08-18
 
 ### Changed

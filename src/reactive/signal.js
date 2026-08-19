@@ -1,5 +1,5 @@
 /**
- * A small SolidJS-style push-based signal store (spec §8). No virtual DOM,
+ * A small SolidJS-style push-based signal store. No virtual DOM,
  * no diffing — effects mutate real nodes directly.
  */
 

@@ -6,7 +6,7 @@ function report(onMessageError, error, message) {
   try {
     onMessageError?.(error, message);
   } catch {
-    // an observer is never allowed to break the chat (spec §6.7)
+    // an observer is never allowed to break the chat
   }
 }
 
@@ -111,12 +111,16 @@ export async function renderResult(result, { view, state }) {
 }
 
 /**
- * The three-stage message lifecycle (spec §6):
+ * The three-stage message lifecycle:
  *   beforeSubmitMessage → onSendMessage → afterSubmitMessage
  * correlated across all three by messageId. No fetch, no retry, no timeout,
- * no abort — that boundary is held here at the code level (spec §6.2).
+ * no abort — that boundary is held here at the code level.
+ *
+ * `source` names where the turn came from. `'suggestion'` routes stage 2 to
+ * `onSendSuggestion` when the consumer registered one; everything else — a
+ * typed message, `bot.submit()` — always goes to `onSendMessage`.
  */
-export async function submitMessage({ text, config, view, state, callbacks }) {
+export async function submitMessage({ text, source, config, view, state, callbacks }) {
   const { beforeSubmitMessage, onSendMessage, afterSubmitMessage, onMessageError } = callbacks;
 
   let message = {
@@ -136,21 +140,65 @@ export async function submitMessage({ text, config, view, state, callbacks }) {
     return;
   }
 
+  const entry = { ...message, role: 'user' };
+
+  // A chip click is answered by onSendSuggestion when one is registered, so it
+  // is called here rather than at stage 2 proper: this is the last moment at
+  // which nothing has rendered, and a synchronous `false` has always cancelled
+  // the turn outright. Waiting for a promise first would delay the user's own
+  // bubble, so an async handler resolving to `false` is handled later, where it
+  // can only end the turn rather than erase it.
+  //
+  // The history it sees already includes this message, exactly as onSendMessage's
+  // does — the entry is passed in rather than committed to state, because a
+  // cancelled turn must leave nothing behind.
+  let produced;
+  let producerError;
+
+  if (source === 'suggestion' && typeof callbacks.onSendSuggestion === 'function') {
+    try {
+      produced = callbacks.onSendSuggestion(message, {
+        history: state.conversation().concat(entry),
+        config,
+      });
+    } catch (error) {
+      producerError = error;
+    }
+    if (produced === false) return;
+  }
+
   batch(() => {
     view.appendMessage({ role: 'user', text: message.text, messageId: message.messageId });
     state.setDisabledSubmit(true);
     view.showTyping();
   });
-  state.appendToConversation({ ...message, role: 'user' });
+  state.appendToConversation(entry);
 
   // stage 2 — the consumer produces the reply
   let reply;
   try {
-    const result = await onSendMessage(message, {
-      history: state.conversation(),
-      config,
-    });
-    reply = await renderResult(result, { view, state });
+    if (producerError) throw producerError;
+
+    // Only awaited when there is something to await: on the ordinary path
+    // `produced` is undefined, and an `await undefined` would still cost a
+    // microtask before onSendMessage is even called.
+    let result = produced === undefined ? undefined : await produced;
+
+    // Nothing (or `true`) back from onSendSuggestion means it declined this
+    // chip, so the turn falls through to onSendMessage. `true` counts as
+    // declining only so the callback's original boolean contract still holds.
+    if (result === undefined || result === null || result === true) {
+      result = await onSendMessage(message, {
+        history: state.conversation(),
+        config,
+      });
+    }
+
+    // A `false` that arrived from a promise is too late to cancel — the message
+    // is on screen — so it ends the turn with no reply instead of erasing it.
+    if (result !== false) {
+      reply = await renderResult(result, { view, state });
+    }
   } catch (error) {
     batch(() => {
       view.hideTyping();

@@ -6,7 +6,7 @@ const THUMB_UP_PATH =
 const THUMB_DOWN_PATH =
   'M22,3H20V15H22V3M1,14C1,14.55 1.45,15 2,15H8.31L7.36,19.57L7.33,19.89C7.33,20.3 7.5,20.68 7.77,20.95L8.83,22L15.41,15.41C15.78,15.05 16,14.55 16,14V5C16,3.9 15.1,3 14,3H6C5.17,3 4.46,3.5 4.16,4.22L1.14,11.27C1.05,11.5 1,11.74 1,12V14Z';
 
-/** Thumbs up/down attached to an agent message when config.collectFeedback is on (spec §6.6). */
+/** Thumbs up/down attached to an agent message when config.collectFeedback is on. */
 export class Feedback {
   constructor({ doc, messageId, onSubmit = () => {} }) {
     this.doc = doc;

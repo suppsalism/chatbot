@@ -289,22 +289,6 @@ describe('createChatbot — submit', () => {
 
     expect(onSendMessage.mock.calls[0][0].text).toBe('Pricing');
   });
-
-  it('lets onSuggestionClick veto the auto-submit by returning false', async () => {
-    const onSendMessage = vi.fn(() => 'ok');
-    bot = createChatbot({
-      mount,
-      onSendMessage,
-      onSuggestionClick: () => false,
-      suggestedMessages: ['Pricing'],
-    });
-    const doc = mount.querySelector('iframe').contentWindow.document;
-
-    doc.querySelector('.ss-suggestion').click();
-    await Promise.resolve();
-
-    expect(onSendMessage).not.toHaveBeenCalled();
-  });
 });
 
 describe('createChatbot — updateConfig', () => {

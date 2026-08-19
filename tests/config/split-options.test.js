@@ -18,11 +18,11 @@ describe('splitOptions', () => {
     const names = [
       'beforeSubmitMessage',
       'onSendMessage',
+      'onSendSuggestion',
       'afterSubmitMessage',
       'onReady',
       'onOpen',
       'onClose',
-      'onSuggestionClick',
       'onFeedbackSubmit',
       'onMessageError',
     ];

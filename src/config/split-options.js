@@ -4,11 +4,11 @@ import { warn } from '../utils/warn';
 const CALLBACK_KEYS = [
   'beforeSubmitMessage',
   'onSendMessage',
+  'onSendSuggestion',
   'afterSubmitMessage',
   'onReady',
   'onOpen',
   'onClose',
-  'onSuggestionClick',
   'onFeedbackSubmit',
   'onMessageError',
 ];
@@ -17,7 +17,7 @@ const CONFIG_KEYS = new Set(CONFIG_SCHEMA.map((field) => field.key));
 
 /**
  * A flat createChatbot(options) object → { config, callbacks }. Anything in
- * neither set warns once and is dropped (guide §5 Step 2).
+ * neither set warns once and is dropped.
  */
 export function splitOptions(options) {
   const config = {};
