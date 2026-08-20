@@ -1,6 +1,6 @@
 {
   "name": "@suppsalismjs/chatbot",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A pure UI and state package for a chat widget — zero runtime dependencies, no network calls. Bring your own onSendMessage.",
   "type": "module",
   "sideEffects": false,
