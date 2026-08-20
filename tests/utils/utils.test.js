@@ -3,6 +3,7 @@ import { getTextColorForBackground } from '../../src/utils/color';
 import { parseTypedValue } from '../../src/utils/coerce';
 import { generateUuid } from '../../src/utils/uuid';
 import { isAttachedElement } from '../../src/utils/guards';
+import { readEditableText } from '../../src/utils/editable-text';
 import { echoReply } from '../../src/echo-reply';
 
 describe('getTextColorForBackground', () => {
@@ -87,6 +88,78 @@ describe('isAttachedElement', () => {
     expect(isAttachedElement('body')).toBe(false);
     expect(isAttachedElement({ isConnected: true })).toBe(false);
     expect(isAttachedElement(document)).toBe(false);
+  });
+});
+
+describe('readEditableText', () => {
+  function editable(build) {
+    const el = document.createElement('div');
+    build(el);
+    return el;
+  }
+
+  it('reads plain text untouched', () => {
+    const el = editable((node) => node.appendChild(document.createTextNode('hello')));
+    expect(readEditableText(el)).toBe('hello');
+  });
+
+  it('turns a <br> between text nodes into a newline', () => {
+    const el = editable((node) => {
+      node.appendChild(document.createTextNode('hello'));
+      node.appendChild(document.createElement('br'));
+      node.appendChild(document.createTextNode('world'));
+    });
+    expect(readEditableText(el)).toBe('hello\nworld');
+  });
+
+  it('turns consecutive <br>s into consecutive newlines', () => {
+    const el = editable((node) => {
+      node.appendChild(document.createTextNode('a'));
+      node.appendChild(document.createElement('br'));
+      node.appendChild(document.createElement('br'));
+      node.appendChild(document.createTextNode('b'));
+    });
+    expect(readEditableText(el)).toBe('a\n\nb');
+  });
+
+  it('separates sibling block elements (pasted multi-line content) with a newline', () => {
+    const el = editable((node) => {
+      const first = document.createElement('div');
+      first.textContent = 'line one';
+      const second = document.createElement('div');
+      second.textContent = 'line two';
+      node.appendChild(first);
+      node.appendChild(second);
+    });
+    expect(readEditableText(el)).toBe('line one\nline two');
+  });
+
+  it('does not add a leading newline before the first block', () => {
+    const el = editable((node) => {
+      const only = document.createElement('div');
+      only.textContent = 'solo';
+      node.appendChild(only);
+    });
+    expect(readEditableText(el)).toBe('solo');
+  });
+
+  it('treats a fully empty element as an empty string', () => {
+    const el = editable(() => {});
+    expect(readEditableText(el)).toBe('');
+  });
+
+  it('treats the lone <br> placeholder browsers leave behind as empty', () => {
+    const el = editable((node) => node.appendChild(document.createElement('br')));
+    expect(readEditableText(el)).toBe('');
+  });
+
+  it('treats a <div><br></div> placeholder as empty', () => {
+    const el = editable((node) => {
+      const wrapper = document.createElement('div');
+      wrapper.appendChild(document.createElement('br'));
+      node.appendChild(wrapper);
+    });
+    expect(readEditableText(el)).toBe('');
   });
 });
 

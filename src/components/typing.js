@@ -33,13 +33,9 @@ export class Typing {
       group.appendChild(avatarWrapper);
     }
 
-    const bubble = this.doc.createElement('span');
-    bubble.className = `${CLASS.message} ${CLASS.messageLeft}`;
-    group.appendChild(bubble);
-
     const typing = this.doc.createElement('span');
     typing.className = CLASS.typing;
-    bubble.appendChild(typing);
+    group.appendChild(typing);
 
     for (let i = 0; i < 3; i += 1) {
       const dot = this.doc.createElement('span');

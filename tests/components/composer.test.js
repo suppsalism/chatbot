@@ -37,6 +37,16 @@ describe('composer', () => {
     textarea().dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
   }
 
+  function typeMultiline(...lines) {
+    const el = textarea();
+    el.textContent = '';
+    lines.forEach((line, index) => {
+      if (index > 0) el.appendChild(doc.createElement('br'));
+      el.appendChild(doc.createTextNode(line));
+    });
+    el.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+  }
+
   it('starts with the send button disabled', () => {
     expect(button().disabled).toBe(true);
     expect(button().classList.contains('ss-disabled')).toBe(true);
@@ -113,6 +123,20 @@ describe('composer', () => {
 
     await vi.waitFor(() => expect(wrapper.classList.contains('ss-disabled')).toBe(false));
     expect(textarea().contentEditable).toBe('true');
+  });
+
+  it('preserves line breaks from Shift+Enter when sent', async () => {
+    typeMultiline('hello', 'world');
+    button().click();
+
+    await vi.waitFor(() => expect(bubbles()[0]).toBe('hello\nworld'));
+  });
+
+  it('preserves multiple consecutive line breaks', async () => {
+    typeMultiline('a', '', 'b');
+    button().click();
+
+    await vi.waitFor(() => expect(bubbles()[0]).toBe('a\n\nb'));
   });
 
   it('tracks the placeholder through updateConfig', () => {

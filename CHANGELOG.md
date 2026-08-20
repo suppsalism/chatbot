@@ -7,6 +7,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The publi
 config fields, the callbacks, the lifecycle payload shapes, and the instance API — none of them
 change within a major version.
 
+## [v2.0.1] - 2026-08-20
+
+### Fixed
+
+- **Multi-line messages lost every line break.** The composer's `input` handler read
+  `textarea.textContent`, which walks text nodes only and has no concept of element boundaries.
+  Shift+Enter inserts a `<br>` (and a multi-line paste can land as sibling `<div>`s), so every line
+  break vanished the instant a keystroke fired — well before `onSendMessage` ever saw the text.
+  `message.js` was never at fault: it already renders `\n` correctly via `white-space: pre-wrap`,
+  there was just never one to render.
+
+  Reading now goes through a new `readEditableText()` helper (`utils/editable-text.js`) that walks
+  the contenteditable's actual DOM structure and turns `<br>` and block-level boundaries back into
+  literal `\n` characters, matching what the user visually composed. Pure DOM traversal, so it
+  behaves identically under the jsdom test suite and in a real browser — unlike `element.innerText`,
+  which jsdom does not implement.
+
 ## [v2.0.0] - 2026-08-19
 
 ### Changed
