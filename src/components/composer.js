@@ -1,6 +1,7 @@
 import { createEffect, createMemo } from '../reactive/signal';
 import { CLASS } from '../constants/class-names';
 import { createIcon } from '../dom/icon';
+import { readEditableText } from '../utils/editable-text';
 
 const SEND_ICON_PATH = 'M2,21L23,12L2,3V10L17,12L2,14V21Z';
 
@@ -83,7 +84,7 @@ export class Composer {
       this.onSend(text);
     };
 
-    this.on(textarea, 'input', () => this.setMessage(textarea.textContent));
+    this.on(textarea, 'input', () => this.setMessage(readEditableText(textarea)));
     this.on(textarea, 'keydown', (event) => {
       if (event.key === 'Enter' && event.shiftKey) return;
       if (event.key === 'Enter') {

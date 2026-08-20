@@ -1,7 +1,7 @@
 # @suppsalismjs/chatbot
 
 <a href="https://github.com/suppsalism/chatbot">
-	<img width="300px" src="assets/banner.png" alt="A chat widget UI for any web page" />
+	<img width="300px" src="assets/banner.svg" alt="A chat widget UI for any web page" />
 </a>
 
 [![npm](https://img.shields.io/npm/v/@suppsalismjs/chatbot.svg)](https://www.npmjs.com/package/@suppsalismjs/chatbot)

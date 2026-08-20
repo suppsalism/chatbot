@@ -85,7 +85,7 @@ body.ss-theme-dark .ss-typing {
 
 .ss-typing {
   border-radius: 99px;
-  padding: 5px 8px;
+  padding: 12px;
   display: flex;
   align-items: center;
   width: fit-content;
