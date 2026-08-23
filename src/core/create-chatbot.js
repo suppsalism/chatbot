@@ -80,7 +80,9 @@ import { safeInvoke } from './safe-invoke';
  * One agent message.
  *
  * @typedef {Object} Reply
- * @property {string} text Required.
+ * @property {string} text Required. Parsed for rich text — `**bold**`, `*italic*`, `* ` bullet
+ *   lists, `1. ` numbered lists, `\n` line breaks. Agent text only; what the user typed is never
+ *   parsed.
  * @property {string[]} [suggestions] Chips for the next turn. The chip row is
  *   single, so across an array of replies the last non-empty set wins.
  * @property {FormSpec} [form] A form rendered inside this message's bubble.

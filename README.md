@@ -34,7 +34,7 @@ reply — this package builds the widget, renders it, and runs every interaction
   ]);
 </script>
 <script
-  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@2/dist/chatbot.umd.js"
+  src="https://cdn.jsdelivr.net/npm/@suppsalismjs/chatbot@3/dist/chatbot.umd.js"
   defer
 ></script>
 
@@ -262,7 +262,7 @@ interface Message {
 }
 
 interface Reply {
-  text: string;                  // required
+  text: string;                  // required; parsed for rich text — see below
   suggestions?: string[];        // chips for the next turn
   form?: FormSpec;               // a form rendered inside this message
 }
@@ -349,6 +349,46 @@ non-empty set wins. A streamed reply is always one bubble and carries no form.
 `ctx.history` is a read-only snapshot of the conversation, and `ctx.config` is
 the current resolved config — read from it rather than closing over a value that
 may go stale after `updateConfig()`.
+
+### Rich text
+
+Agent replies are parsed for formatting. Four rules, applied to the reply's
+`text`:
+
+| You return                | Renders as      |
+| ------------------------- | --------------- |
+| `**Total:** $9`           | **Total:** $9   |
+| `*roughly*`               | _roughly_       |
+| `* Free` on its own line  | a bullet item   |
+| `1. Free` on its own line | a numbered item |
+| `\n`                      | a line break    |
+
+Consecutive `* ` lines become one bullet list, consecutive `1. ` lines one
+numbered list, and the numbers you write are ignored — `1.` three times still
+renders 1, 2, 3.
+
+**The space after the marker is required.** `* Milk` is a bullet; `*Milk*` is
+italic; `1. Free` is a numbered item while `1.5 million` is just a number. That
+one space is what keeps the two readings apart.
+
+Anything that doesn't parse is left exactly as written, so an unclosed `**`
+stays two asterisks rather than eating the rest of the message. Formatting does
+not nest — the inner markers in `**bold and *italic***` render literally.
+
+**This applies to agent replies only.** What a visitor types appears in their
+bubble character for character, so a question about `**markdown**` doesn't come
+out bold. That covers everything the agent says: replies from `onSendMessage`,
+`onSendSuggestion`, and a form's `onSubmit`, plus `initialMessages`. A streamed
+reply is re-parsed as each chunk arrives, so a marker split across two chunks
+resolves the moment its closing pair lands.
+
+There is no option to turn this off — it is how the widget renders a reply.
+
+**Nothing here can produce markup.** The parser builds elements directly and can
+only ever emit `<strong>`, `<em>`, `<br>`, `<ul>`, `<ol>`, and `<li>`. A reply is
+never treated as HTML, so `<script>` in a reply renders as the literal text
+`<script>` — which matters, because replies routinely come from a model or a
+backend, and the widget's iframe isolates CSS rather than privilege.
 
 ### Forms
 
@@ -785,7 +825,7 @@ The bundle warns and no-ops rather than clobbering an existing global. Check
 CMS plugin.
 
 **Which version am I running?**
-`SsChat.version`. Always pin a major (`@2`) in the CDN URL, never `@latest`. A
+`SsChat.version`. Always pin a major (`@3`) in the CDN URL, never `@latest`. A
 major pin picks up fixes and new features automatically, and the public surface
 — config fields, callbacks, payload shapes, the instance API — cannot change
 under you within it.
@@ -820,8 +860,8 @@ breaking widgets already deployed on pages you don't control.
 
 ## Examples
 
-Three runnable pages in [`examples/`](./examples), covering the UMD/CDN global,
-the `<ss-chat>` element, and a streamed reply:
+Five runnable pages in [`examples/`](./examples), covering the UMD/CDN global,
+the `<ss-chat>` element, a streamed reply, reply forms, and rich text:
 
 ```bash
 npm install && npm run build

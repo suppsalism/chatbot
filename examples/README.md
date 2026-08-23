@@ -17,6 +17,7 @@ refuse to load over `file://`.
 | [`custom-element.html`](./custom-element.html) | `defineChatElement()`, per-tag `data-*` overriding shared defaults, live attribute edits, auto-destroy on removal              |
 | [`reply-forms.html`](./reply-forms.html)       | A `form` on a reply with its own `onSubmit`, select/checkbox/textarea fields, server-side rejection, and multi-message replies |
 | [`esm-streaming.html`](./esm-streaming.html)   | `createChatbot()` into your own container, a streamed async-generator reply, all three lifecycle stages                        |
+| [`rich-text.html`](./rich-text.html)           | Bold, italic, bullet and numbered lists, line breaks — plus the cases that deliberately stay literal                           |
 
 None of them make a network call — every `onSendMessage` produces its reply locally, which is the
 whole point of the package boundary.

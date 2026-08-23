@@ -348,6 +348,27 @@ body.ss-theme-dark .ss-message-wrapper .ss-message-container .ss-message.ss-left
   background-color: rgba(220, 38, 38, 0.1);
   color: #dc2626;
 }
+
+/* START: rich text */
+.ss-message-wrapper .ss-message-container .ss-message ul,
+.ss-message-wrapper .ss-message-container .ss-message ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message li {
+  white-space: normal;
+  margin: 2px 0;
+}
+/* END: rich text */
+
+.ss-message-wrapper .ss-message-container .ss-message strong {
+  font-weight: 600;
+}
+
+.ss-message-wrapper .ss-message-container .ss-message em {
+  font-style: italic;
+}
 /* END: message component */
 
 /* START: feedback component */
