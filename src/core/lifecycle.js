@@ -86,12 +86,23 @@ export async function renderResult(result, { view, state }) {
   // ambiguous. Streaming therefore carries no form.
   if (isAsyncIterable(result)) {
     const messageId = generateUuid();
-    const handle = view.beginAgentMessage({ messageId });
+    let handle = null;
     let text = '';
 
     for await (const chunk of result) {
       text += typeof chunk === 'string' ? chunk : chunk.text;
+
+      if (!handle) {
+        view.hideTyping();
+        handle = view.beginAgentMessage({ messageId });
+      }
+
       handle.update(text);
+    }
+
+    if (!handle) {
+      warn('onSendMessage returned a stream that yielded nothing — nothing to render');
+      return { messageId, text };
     }
 
     handle.finish();
