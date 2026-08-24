@@ -183,6 +183,107 @@ describe('submitMessage — streaming', () => {
     expect(state.disabledSubmit()).toBe(false);
     expect(view.hideTyping).toHaveBeenCalled();
   });
+
+  // The indicator means "waiting for the reply", so it has to be gone by the
+  // time the reply starts arriving — not still sitting above the bubble for
+  // however long the stream runs.
+  it('hides typing before opening the bubble, not after the stream ends', async () => {
+    const { view, run } = setup({
+      onSendMessage: async function* () {
+        yield 'a';
+        yield 'b';
+      },
+    });
+
+    await run('hi');
+
+    expect(view.names()).toEqual([
+      'appendMessage',
+      'showTyping',
+      'hideTyping',
+      'beginAgentMessage',
+      'update',
+      'update',
+      'finish',
+      'hideTyping',
+    ]);
+  });
+
+  it('keeps typing up while the stream is still waiting for its first chunk', async () => {
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+
+    const { view, run } = setup({
+      onSendMessage: async function* () {
+        await gate;
+        yield 'a';
+      },
+    });
+
+    const inFlight = run('hi');
+    await vi.waitFor(() => expect(view.showTyping).toHaveBeenCalled());
+
+    // The gap before the first chunk is usually the network. It belongs to the
+    // indicator, not to an empty bubble.
+    expect(view.beginAgentMessage).not.toHaveBeenCalled();
+    expect(view.hideTyping).not.toHaveBeenCalled();
+
+    release();
+    await inFlight;
+
+    expect(view.beginAgentMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('strands no empty bubble when the stream throws before its first chunk', async () => {
+    const { view, state, run } = setup({
+      // eslint-disable-next-line require-yield
+      onSendMessage: async function* () {
+        throw new Error('upstream died');
+      },
+    });
+
+    await run('hi');
+
+    // Previously the bubble was opened before the loop, so a stream that failed
+    // here left an empty one on screen next to the error bubble.
+    expect(view.beginAgentMessage).not.toHaveBeenCalled();
+    expect(view.appendError).toHaveBeenCalledTimes(1);
+    expect(view.hideTyping).toHaveBeenCalled();
+    expect(state.disabledSubmit()).toBe(false);
+  });
+
+  it('keeps the partial bubble when the stream throws mid-stream', async () => {
+    const { view, run } = setup({
+      onSendMessage: async function* () {
+        yield 'partial';
+        throw new Error('died mid-stream');
+      },
+    });
+
+    await run('hi');
+
+    // Chunks that did arrive are real content, so the bubble stays and the
+    // error bubble joins it.
+    expect(view.beginAgentMessage).toHaveBeenCalledTimes(1);
+    expect(view.appendError).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns and renders nothing for a stream that yields nothing', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { view, state, run } = setup({
+      onSendMessage: async function* () {},
+    });
+
+    await run('hi');
+
+    expect(view.beginAgentMessage).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('yielded nothing'));
+    expect(state.conversation().filter((entry) => entry.role === 'agent')).toHaveLength(0);
+    expect(state.disabledSubmit()).toBe(false);
+
+    vi.restoreAllMocks();
+  });
 });
 
 describe('submitMessage — beforeSubmitMessage', () => {

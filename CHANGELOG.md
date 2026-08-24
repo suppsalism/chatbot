@@ -7,6 +7,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The publi
 config fields, the callbacks, the lifecycle payload shapes, and the instance API — none of them
 change within a major version.
 
+## [v3.0.1] - 2026-08-24
+
+### Fixed
+
+- **The typing indicator stayed on screen for the whole of a streamed reply.** `renderResult()`
+  opened the bubble before entering its `for await`, while `hideTyping()` only ran once
+  `renderResult` resolved — which for a stream is after the _last_ chunk. Since `showTyping()`
+  appends to the container first, the bubble landed after it, so the dots sat above the text as it
+  streamed in.
+
+  The first chunk is what ends the wait, so it is now what swaps the indicator for the bubble.
+  Hiding the indicator before the loop instead would not have worked: the gap before the first
+  chunk is usually the network round trip, and an empty bubble sitting alone through it is the same
+  problem in different clothes.
+
+- **A stream that failed before its first chunk stranded an empty bubble.** The bubble had already
+  been appended, so an upstream error left a blank bubble above the "Something went wrong" one.
+  Deferring creation fixes it: no chunk, no bubble. A stream that throws _mid_-stream still keeps
+  its partial bubble, since chunks that arrived are real content.
+
+### Changed
+
+- A stream that yields nothing now warns and renders nothing, matching what returning `[]` from
+  `onSendMessage` already does. It previously produced an empty bubble and an empty conversation
+  entry. `afterSubmitMessage` still receives `{ messageId, text: '' }`, so the payload shape is
+  unchanged.
+
 ## [v3.0.0] - 2026-08-23
 
 ### Added
