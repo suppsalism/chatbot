@@ -1,4 +1,5 @@
 import { getTextColorForBackground } from '../utils/color';
+import { renderRichText } from '../utils/rich-text';
 import { CLASS } from '../constants/class-names';
 import { Feedback } from './feedback';
 import { Form } from './form';
@@ -14,9 +15,11 @@ export class Message {
     messageId,
     onFeedback,
     form, // normalized spec, its onSubmit already wired by core/view
+    rich = false, // parse markers in `text`; only ever true for agent-authored text
   }) {
     this.doc = doc;
     this.role = role;
+    this.rich = rich;
     this.avatar = avatar;
     this.brandColor = brandColor;
     this.error = error;
@@ -67,8 +70,11 @@ export class Message {
     group.appendChild(bubble);
 
     const textSpan = this.doc.createElement('span');
-    textSpan.textContent = text;
     bubble.appendChild(textSpan);
+    // Assigned before setText() so the first render goes through the same path
+    // every streamed update will.
+    this.textSpan = textSpan;
+    this.setText(text);
 
     // A form belongs to the bubble it arrived with, so it sits inside the
     // message rather than in a shared region of the panel.
@@ -90,11 +96,22 @@ export class Message {
     }
 
     this.element = wrapper;
-    this.textSpan = textSpan;
   }
 
+  /**
+   * Replaces the bubble's content. Streaming calls this once per chunk with the
+   * full accumulated text, so a rich message is re-parsed from scratch each
+   * time — which is what lets a marker split across two chunks resolve as soon
+   * as its closing pair arrives.
+   */
   setText(text) {
-    this.textSpan.textContent = text;
+    if (!this.rich) {
+      this.textSpan.textContent = text;
+      return;
+    }
+
+    this.textSpan.textContent = '';
+    this.textSpan.appendChild(renderRichText(this.doc, text));
   }
 
   /** No-op when this message has no feedback pair (user messages, or collectFeedback off). */

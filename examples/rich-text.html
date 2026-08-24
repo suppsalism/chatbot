@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@suppsalismjs/chatbot — rich text</title>
+    <style>
+      body {
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        max-width: 42rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+      }
+      li {
+        margin-bottom: 0.5rem;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.4rem 1.2rem 0.4rem 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Rich text</h1>
+    <p>
+      An agent's reply is parsed for formatting. What the visitor types never is — type
+      <code>**bold**</code> yourself and it comes back to you as literal asterisks in your own
+      bubble.
+    </p>
+
+    <table>
+      <tr>
+        <th>Reply text</th>
+        <th>Renders as</th>
+      </tr>
+      <tr>
+        <td><code>**Total:** $9</code></td>
+        <td><strong>Total:</strong> $9</td>
+      </tr>
+      <tr>
+        <td><code>*roughly*</code></td>
+        <td><em>roughly</em></td>
+      </tr>
+      <tr>
+        <td><code>* Free</code></td>
+        <td>a bullet item</td>
+      </tr>
+      <tr>
+        <td><code>1. Free</code></td>
+        <td>a numbered item</td>
+      </tr>
+      <tr>
+        <td><code>\n</code></td>
+        <td>a line break</td>
+      </tr>
+    </table>
+
+    <ul>
+      <li>Say <strong>"plans"</strong> → a bullet list with bold inside the items.</li>
+      <li>Say <strong>"steps"</strong> → a numbered list.</li>
+      <li>Say <strong>"stream"</strong> → the same content streamed, re-parsed on every chunk.</li>
+      <li>
+        Say <strong>"edge"</strong> → the cases that deliberately do <em>not</em> parse: an unclosed
+        marker, <code>1.5 million</code>, and a lone asterisk.
+      </li>
+      <li>
+        Say <strong>"unsafe"</strong> → a reply containing a <code>&lt;script&gt;</code> tag,
+        rendered as the literal characters. There is no HTML path here at all.
+      </li>
+    </ul>
+
+    <div id="chat-root"></div>
+
+    <script type="module">
+      import { createChatbot } from '../dist/chatbot.modern.js';
+
+      const PLANS = [
+        'Here is what we offer:',
+        '* **Free** — 100 messages a month',
+        '* **Pro** — $9/mo, unlimited',
+        '* **Enterprise** — talk to us',
+        'Everything *except* Enterprise is self-serve.',
+      ].join('\n');
+
+      const STEPS = [
+        'To get started:',
+        '1. Install the package',
+        '2. Pass an **onSendMessage**',
+        '3. There is no step 3',
+      ].join('\n');
+
+      // Deliberately unparsed: an unclosed marker stays literal, a decimal is
+      // not a list item, and a lone asterisk is just an asterisk.
+      const EDGE = [
+        'These stay exactly as written:',
+        'an unclosed **marker',
+        '1.5 million users',
+        '2 * 3 = 6',
+        '*Milk* is italic, but * Milk is a bullet — the space decides.',
+      ].join('\n');
+
+      async function* streamed() {
+        // Split mid-marker on purpose: "**Fr" and "ee**" arrive separately, so
+        // the bold resolves only once the closing pair lands.
+        const chunks = [
+          'Here is what we offer:\n* **Fr',
+          'ee** — 100 messages a month\n* **P',
+          'ro** — $9/mo',
+        ];
+        for (const chunk of chunks) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          yield chunk;
+        }
+      }
+
+      createChatbot({
+        mount: document.querySelector('#chat-root'),
+        name: 'Docs',
+        brandColor: '#7c3aed',
+        autoOpen: true,
+        initialMessages: [
+          'Hi! Ask about **plans**, **steps**, **stream**, **edge**, or **unsafe**.',
+        ],
+        suggestedMessages: ['plans', 'steps', 'stream', 'edge', 'unsafe'],
+
+        onSendMessage: async (message) => {
+          const text = message.text.toLowerCase();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          if (text.includes('plans')) return { text: PLANS, suggestions: ['steps', 'stream'] };
+          if (text.includes('steps')) return { text: STEPS, suggestions: ['plans', 'edge'] };
+          if (text.includes('stream')) return streamed();
+          if (text.includes('edge')) return { text: EDGE };
+          if (text.includes('unsafe')) {
+            // The closing tag is escaped so this page's own <script> survives —
+            // the string the widget receives is the plain characters.
+            return { text: 'Rendered as text, never parsed:\n<script>alert(1)<\/script>' };
+          }
+
+          return {
+            text: `You said: "${message.text}"\nYour own text is *never* parsed — see your bubble above.`,
+            suggestions: ['plans', 'steps', 'edge'],
+          };
+        },
+
+        onMessageError: (error) => console.error('chat error', error),
+      });
+    </script>
+  </body>
+</html>

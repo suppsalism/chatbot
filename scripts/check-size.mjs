@@ -17,10 +17,10 @@ const root = path.resolve(import.meta.dirname, '..');
 
 /** kB, gzipped. */
 const BUDGETS = {
-  'dist/chatbot.modern.js': 13,
-  'dist/chatbot.module.js': 16,
-  'dist/chatbot.cjs': 16,
-  'dist/chatbot.umd.js': 16,
+  'dist/chatbot.modern.js': 15,
+  'dist/chatbot.module.js': 18,
+  'dist/chatbot.cjs': 18,
+  'dist/chatbot.umd.js': 18,
 };
 
 let failed = false;

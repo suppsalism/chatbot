@@ -7,6 +7,48 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The publi
 config fields, the callbacks, the lifecycle payload shapes, and the instance API — none of them
 change within a major version.
 
+## [v3.0.0] - 2026-08-23
+
+### Added
+
+- **Agent replies are rendered as rich text.** A reply's `text` is parsed for `**bold**`,
+  `*italic*`, `* ` bullet lists, `1. ` numbered lists, and `\n` line breaks. Consecutive list lines
+  become one list, and the numbers written are ignored — `1.` three times still renders 1, 2, 3.
+
+  The space after a list marker is required, and is what disambiguates the two readings of a
+  leading `*`: `* Milk` is a bullet, `*Milk*` is italic. The same rule stops `1.5 million` becoming
+  a numbered item. Anything that fails to parse is left exactly as written — an unclosed `**` stays
+  two asterisks rather than consuming the rest of the message, the same degrade-don't-throw rule
+  config and form specs follow. Formatting does not nest.
+
+  **Nothing here can produce markup.** `renderRichText()` builds elements with
+  `createElement`/`textContent` and returns a `DocumentFragment`; no HTML string exists at any
+  point, and the only elements it can emit are `<strong>`, `<em>`, `<br>`, `<ul>`, `<ol>`, `<li>`. A
+  reply containing `<script>` renders as those literal characters. This is the reason the feature is
+  a parser rather than a passthrough: replies routinely originate from a model or a backend, and the
+  widget's iframe is same-origin — it isolates CSS, not privilege.
+
+  Transformations live in two rule tables in `utils/rich-text.js`. Adding strikethrough, inline
+  code, or links is one row; nothing else in the module or outside it changes.
+
+### Changed
+
+- **Only agent-authored text is parsed** — replies from `onSendMessage`, `onSendSuggestion` and a
+  form's `onSubmit`, plus `initialMessages`. What the visitor types renders character for character
+  in their own bubble, so asking the bot about `**markdown**` does not come out bold. The composer
+  is untouched: it reads and writes plain text exactly as before.
+
+  A streamed reply re-parses the full accumulated text on each chunk, so a marker split across two
+  chunks is literal until its closing pair arrives, then becomes an element.
+
+  **This is why the release is major.** Any existing reply whose text contains `**`, a leading
+  `* `, or a leading `1. ` renders differently now. There is no flag to opt out — parsing is the
+  widget's rendering behavior, not a configuration choice.
+
+- The gzip budgets in `scripts/check-size.mjs` rise by 2 kB per bundle. The parser accounts for
+  roughly 0.9 kB of that; the rest restores headroom that had fallen to 0–2%, where unrelated
+  changes were failing the check.
+
 ## [v2.0.1] - 2026-08-20
 
 ### Fixed

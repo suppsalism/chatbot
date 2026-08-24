@@ -158,6 +158,7 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         brandColor: config.brandColor,
         onFeedback: role === 'agent' && config.collectFeedback ? handleFeedback : undefined,
         form: wired,
+        rich: role === 'agent',
       });
     },
 
@@ -170,6 +171,7 @@ export function createView({ doc, shell, getConfig, state, callbacks, closeChat,
         avatar: config.avatar,
         brandColor: config.brandColor,
         onFeedback: config.collectFeedback ? handleFeedback : undefined,
+        rich: true,
       });
       return {
         update: (text) => message.setText(text),
